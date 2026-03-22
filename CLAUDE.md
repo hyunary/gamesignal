@@ -15,3 +15,8 @@ Steam 게임 트래픽 데이터를 매일 자동 수집해서 신호(Signal)를
 - 한 번에 하나의 티켓만 완료 후 나에게 보고할 것
 ## 현재 상태
 Day 1 시작 - 환경 구성 단계
+
+## 변경 이력
+- GS-020: Steam 공식 위시리스트 페이지 삭제됨 (2026-03)
+  → SteamSpy top100in2weeks API로 대체
+  → wishlist_rank 컬럼 의미: SteamSpy 2주 기준 인기 순위
