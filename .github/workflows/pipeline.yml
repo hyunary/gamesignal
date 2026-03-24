@@ -1,0 +1,55 @@
+name: GameSignal Daily Pipeline
+on:
+  schedule:
+    # 매일 KST 06:00 = UTC 21:00 (전날)
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    # 수동 실행 버튼 (테스트용)
+    inputs:
+      reason:
+        description: '실행 이유'
+        required: false
+        default: '수동 테스트'
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+      - name: Node.js 20 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Python 설정 (Playwright용)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 패키지 설치
+        run: npm ci
+      - name: Playwright Chromium 설치
+        run: npx playwright install chromium --with-deps
+      - name: 파이프라인 실행
+        env:
+          DATABASE_URL:              ${{ secrets.DATABASE_URL }}
+          REDIS_URL:                 ${{ secrets.REDIS_URL }}
+          STEAM_API_KEY:             ${{ secrets.STEAM_API_KEY }}
+          YOUTUBE_API_KEYS:          ${{ secrets.YOUTUBE_API_KEYS }}
+          DISCORD_WEBHOOK_ALERT:     ${{ secrets.DISCORD_WEBHOOK_ALERT }}
+          DISCORD_WEBHOOK_PIPELINE:  ${{ secrets.DISCORD_WEBHOOK_PIPELINE }}
+          PIPELINE_TIMEOUT_MS:       '3600000'
+          RETRY_MAX:                 '3'
+          RETRY_BASE_MS:             '1000'
+          SCRAPE_DELAY_MIN_MS:       '3000'
+          SCRAPE_DELAY_MAX_MS:       '5000'
+          BLOCK_WAIT_MS:             '900000'
+        run: node pipeline/run.js
+      - name: 실패 시 Discord 알림
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_ALERT: ${{ secrets.DISCORD_WEBHOOK_ALERT }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{\"embeds\":[{\"title\":\"🚨 GitHub Actions 파이프라인 실패\",\"description\":\"즉시 확인이 필요합니다.\",\"color\":14889515}]}" \
+          $DISCORD_WEBHOOK_ALERT
