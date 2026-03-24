@@ -1,7 +1,9 @@
 const { chromium } = require('playwright-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { Pool } = require('pg');
-require('dotenv').config();
+if (!process.env.DATABASE_URL) {
+  require('dotenv').config();
+}
 const { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun } = require('../db/queries');
 const { retryWithBackoff } = require('../utils/retry');
 const { fallbackToPreviousDay } = require('../utils/fallback');

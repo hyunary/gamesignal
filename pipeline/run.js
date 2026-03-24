@@ -2,7 +2,9 @@ const { collectAppDetails } = require('../src/collectors/steamApi');
 const { retryWithBackoff } = require('../src/utils/retry');
 const { fallbackToPreviousDay } = require('../src/utils/fallback');
 const { sendPipelineAlert } = require('../src/notifications/discord');
-require('dotenv').config();
+if (!process.env.DATABASE_URL) {
+  require('dotenv').config();
+}
 // 동적 require (각 수집기)
 const mostPlayed = require('../src/collectors/mostPlayed');
 const wishlist   = require('../src/collectors/wishlist');

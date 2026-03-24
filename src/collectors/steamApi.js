@@ -2,7 +2,9 @@ const axios = require('axios');
 const pool = require('../db/pool');
 const { retryWithBackoff } = require('../utils/retry');
 const { sleep } = require('../utils/sleep');
-require('dotenv').config();
+if (!process.env.DATABASE_URL) {
+  require('dotenv').config();
+}
 // 게임 상세 정보 수집 (appdetails API)
 async function fetchAppDetails(appId) {
   const { data } = await axios.get(
