@@ -28,6 +28,16 @@ jobs:
           python-version: '3.11'
       - name: 패키지 설치
         run: npm ci
+      - name: Supabase IPv4 주소 등록 (IPv6 우회)
+        run: |
+          SUPABASE_HOST="db.bgsutabumisgjsyeeodb.supabase.co"
+          SUPABASE_IPV4=$(curl -s "https://dns.google/resolve?name=${SUPABASE_HOST}&type=A" | python3 -c "import sys,json; data=json.load(sys.stdin); print(data['Answer'][0]['data'])" 2>/dev/null || echo "")
+          if [ -n "$SUPABASE_IPV4" ]; then
+            echo "$SUPABASE_IPV4 $SUPABASE_HOST" | sudo tee -a /etc/hosts
+            echo "✅ IPv4 등록: $SUPABASE_IPV4"
+          else
+            echo "⚠️ IPv4 조회 실패 - 기본 연결 시도"
+          fi
       - name: Playwright Chromium 설치
         run: npx playwright install chromium --with-deps
       - name: 파이프라인 실행
