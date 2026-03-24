@@ -44,6 +44,7 @@ jobs:
           SCRAPE_DELAY_MIN_MS:       '3000'
           SCRAPE_DELAY_MAX_MS:       '5000'
           BLOCK_WAIT_MS:             '900000'
+          NODE_ENV:                  production
         run: node pipeline/run.js
       - name: 실패 시 Discord 알림
         if: failure()
