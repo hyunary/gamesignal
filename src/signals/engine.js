@@ -39,11 +39,14 @@ async function runSignalEngine(date) {
       console.log(`\n📨 Discord 알림 발송 중 (${unnotified.length}개)...`);
       for (const signal of unnotified) {
         try {
-          await sendSignalAlert(signal, {
-            title: signal.title,
-            genres: signal.genres,
-            header_image_url: signal.header_image_url
-          });
+          await Promise.race([
+            sendSignalAlert(signal, {
+              title: signal.title,
+              genres: signal.genres,
+              header_image_url: signal.header_image_url
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Discord 타임아웃')), 5000))
+          ]);
           console.log(`  ✅ 발송: [${signal.priority}] ${signal.signal_type} — ${signal.title}`);
           // 알림 간격 1초 (Discord Rate Limit 방지)
           await new Promise(r => setTimeout(r, 1000));

@@ -51,7 +51,7 @@ async function runPipeline() {
     await runStep('node src/collectors/steamApi.js',   '4/5 appdetails');
     // 5단계: 신호 엔진
     console.log('\n[5/5] 신호 엔진 실행...');
-    await runSignalEngine();
+    await runSignalEngine(new Date().toISOString().split('T')[0]);
     const duration = Math.round((Date.now() - startTime) / 1000);
     console.log(`\n✅ 전체 파이프라인 완료 (${duration}초)`);
   } catch (err) {
