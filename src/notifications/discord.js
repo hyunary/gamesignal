@@ -34,8 +34,6 @@ async function sendSignalAlert(signal, game) {
     },
     timestamp: new Date().toISOString()
   };
-  console.log('Discord 웹훅 URL 확인:', process.env.DISCORD_WEBHOOK_ALERT ? '설정됨' : '미설정');
-  console.log('Discord embed 내용:', JSON.stringify(embed).slice(0, 200));
   await sendDiscordMessage(process.env.DISCORD_WEBHOOK_ALERT, { embeds: [embed] });
   // notified_at 업데이트
   await pool.query(
