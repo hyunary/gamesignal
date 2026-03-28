@@ -7,8 +7,8 @@ const { detectComposite }     = require('./signal5');
 const { startPipelineRun, finishPipelineRun } = require('../db/queries');
 const { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert } = require('../notifications/discord');
 async function runSignalEngine(date) {
-  const today = date || new Date().toISOString().split('T')[0];
-  console.log(`\n🧠 신호 엔진 실행 시작 (기준일: ${today})\n`);
+  const today = new Date().toISOString().split('T')[0]; // 항상 오늘
+  console.log(`기준일: ${today} (실행 시각: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST)`);
   const runId = await startPipelineRun('signal_engine');
   let totalSignals = 0;
   try {

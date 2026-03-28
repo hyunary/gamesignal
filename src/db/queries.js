@@ -33,15 +33,16 @@ async function upsertSnapshot(appId, rank, ccu, peak, date) {
 }
 // pipeline_runs 시작 기록
 async function startPipelineRun(source) {
+  const today = new Date().toISOString().split('T')[0];
   const { rows } = await pool.query(`
     INSERT INTO pipeline_runs (run_date, source, status)
-    VALUES (CURRENT_DATE, $1, 'running')
+    VALUES ($1::date, $2, 'running')
     ON CONFLICT (run_date, source) DO UPDATE SET
       status = 'running',
       started_at = NOW(),
       retry_count = pipeline_runs.retry_count + 1
     RETURNING run_id
-  `, [source]);
+  `, [today, source]);
   return rows[0].run_id;
 }
 // pipeline_runs 완료 기록
