@@ -15,6 +15,12 @@ interface SignalCardProps {
     stock_ticker: string | null;
     exchange: string | null;
     is_listed: boolean | null;
+    positive_pct: number | null;
+    neutral_pct: number | null;
+    negative_pct: number | null;
+    video_url: string | null;
+    video_title: string | null;
+    comments_total: number | null;
   };
 }
 
@@ -94,6 +100,41 @@ export default function SignalCard({ signal }: SignalCardProps) {
               <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-mono">
                 🔒 {signal.company_name} · 비상장
               </span>
+            </div>
+          )}
+          {signal.video_url && signal.comments_total && (
+            <div className="mt-2 p-2 bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-xs text-gray-400">🎬 YouTube 댓글 분석</span>
+                <span className="text-xs text-gray-600">({signal.comments_total}개)</span>
+                <a
+                  href={signal.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:text-blue-300 ml-auto"
+                >
+                  영상 보기 →
+                </a>
+              </div>
+              <div className="flex gap-1 h-2 rounded overflow-hidden">
+                <div
+                  className="bg-green-500"
+                  style={{ width: `${signal.positive_pct}%` }}
+                />
+                <div
+                  className="bg-gray-500"
+                  style={{ width: `${signal.neutral_pct}%` }}
+                />
+                <div
+                  className="bg-red-500"
+                  style={{ width: `${signal.negative_pct}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-green-400">긍정 {signal.positive_pct}%</span>
+                <span className="text-gray-400">중립 {signal.neutral_pct}%</span>
+                <span className="text-red-400">부정 {signal.negative_pct}%</span>
+              </div>
             </div>
           )}
         </div>

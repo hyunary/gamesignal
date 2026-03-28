@@ -18,6 +18,12 @@ export interface Signal {
   stock_ticker: string | null;
   exchange: string | null;
   is_listed: boolean | null;
+  positive_pct: number | null;
+  neutral_pct: number | null;
+  negative_pct: number | null;
+  video_url: string | null;
+  video_title: string | null;
+  comments_total: number | null;
 }
 
 export interface PipelineRun {
@@ -37,7 +43,9 @@ export async function getTodaySignals(): Promise<Signal[]> {
       s.payload, s.notified_at,
       g.app_id, g.title, g.genres, g.header_image_url,
       snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank,
-      ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed
+      ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed,
+      yt.positive_pct, yt.neutral_pct, yt.negative_pct,
+      yt.video_url, yt.video_title, yt.comments_total
     FROM signals s
     JOIN games g USING(app_id)
     LEFT JOIN game_snapshots snap
@@ -45,6 +53,8 @@ export async function getTodaySignals(): Promise<Signal[]> {
     LEFT JOIN publisher_stocks ps
       ON ps.developer_name = g.developer
       OR ps.developer_name = g.publisher
+    LEFT JOIN youtube_sentiment yt
+      ON yt.app_id = s.app_id AND yt.analysis_date = s.signal_date
     WHERE s.signal_date = CURRENT_DATE
       AND s.signal_type != 'composite'
     ORDER BY

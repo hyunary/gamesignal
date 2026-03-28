@@ -39,7 +39,7 @@ async function sendSignalAlert(signal, game) {
     title: `${cfg.emoji} ${game.title}`,
     description: buildDescription(signal.signal_type, payload, stock),
     color: signal.priority === 'P0' ? cfg.color : 0x888780,
-    fields: buildFields(signal.signal_type, payload, game),
+    fields: await buildFields(signal.signal_type, payload, game, signal.app_id),
     footer: {
       text: `GameSignal • ${signal.signal_date} • ${signal.priority}`
     },
@@ -92,13 +92,28 @@ function buildDescription(signalType, payload, stock) {
   return desc;
 }
 // 신호 타입별 필드
-function buildFields(signalType, payload, game) {
+async function buildFields(signalType, payload, game, appId) {
   const fields = [];
   if (game.genres?.length > 0) {
     fields.push({ name: '장르', value: game.genres.slice(0, 3).join(', '), inline: true });
   }
   if (payload.concurrent_users) {
     fields.push({ name: 'CCU', value: payload.concurrent_users.toLocaleString() + '명', inline: true });
+  }
+  // YouTube 감성 분석 결과 조회
+  const { rows: ytRows } = await pool.query(`
+    SELECT positive_pct, neutral_pct, negative_pct, video_url
+    FROM youtube_sentiment
+    WHERE app_id = $1 AND analysis_date = CURRENT_DATE
+    LIMIT 1
+  `, [appId]);
+  if (ytRows[0]?.positive_pct) {
+    const yt = ytRows[0];
+    fields.push({
+      name: '🎬 YouTube 댓글 반응',
+      value: `긍정 ${yt.positive_pct}% / 중립 ${yt.neutral_pct}% / 부정 ${yt.negative_pct}%\n[영상 보기](${yt.video_url})`,
+      inline: false
+    });
   }
   return fields;
 }

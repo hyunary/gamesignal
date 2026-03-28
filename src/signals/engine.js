@@ -6,6 +6,7 @@ const { detectReviewSpike }   = require('./signal4');
 const { detectComposite }     = require('./signal5');
 const { startPipelineRun, finishPipelineRun } = require('../db/queries');
 const { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert } = require('../notifications/discord');
+const { analyzeGameSentiment } = require('../collectors/youtubeSentiment');
 async function runSignalEngine(date) {
   const today = new Date().toISOString().split('T')[0]; // 항상 오늘
   console.log(`기준일: ${today} (실행 시각: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST)`);
@@ -14,6 +15,24 @@ async function runSignalEngine(date) {
   try {
     // S1 → S2 → S3 → S4 순서 실행 (S5는 반드시 마지막)
     totalSignals += await detectNewEntry(today);
+
+    // Wishlist 신규 진입 게임 YouTube 감성 분석
+    const { rows: wlNewEntries } = await pool.query(`
+      SELECT DISTINCT s.app_id, g.title
+      FROM signals s
+      JOIN games g USING(app_id)
+      WHERE s.signal_date = $1
+        AND s.signal_type = 'new_entry_wl'
+    `, [today]);
+
+    if (wlNewEntries.length > 0) {
+      console.log(`\n🎬 YouTube 감성 분석 시작 (${wlNewEntries.length}개 게임)...`);
+      for (const game of wlNewEntries) {
+        await analyzeGameSentiment(game.app_id, game.title);
+        await new Promise(r => setTimeout(r, 2000)); // API 호출 간격
+      }
+    }
+
     totalSignals += await detectTrafficRevival(today);
     totalSignals += await detectWishlistSurge(today);
     totalSignals += await detectReviewSpike(today);
