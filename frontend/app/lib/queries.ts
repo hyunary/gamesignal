@@ -14,6 +14,10 @@ export interface Signal {
   concurrent_users: number;
   wishlist_rank: number;
   notified_at: string;
+  company_name: string | null;
+  stock_ticker: string | null;
+  exchange: string | null;
+  is_listed: boolean | null;
 }
 
 export interface PipelineRun {
@@ -32,11 +36,15 @@ export async function getTodaySignals(): Promise<Signal[]> {
       s.signal_id, s.signal_date, s.signal_type, s.priority,
       s.payload, s.notified_at,
       g.app_id, g.title, g.genres, g.header_image_url,
-      snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank
+      snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank,
+      ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed
     FROM signals s
     JOIN games g USING(app_id)
     LEFT JOIN game_snapshots snap
       ON snap.app_id = s.app_id AND snap.snapshot_date = s.signal_date
+    LEFT JOIN publisher_stocks ps
+      ON ps.developer_name = g.developer
+      OR ps.developer_name = g.publisher
     WHERE s.signal_date = CURRENT_DATE
       AND s.signal_type != 'composite'
     ORDER BY
@@ -53,11 +61,15 @@ export async function getRecentSignals(): Promise<Signal[]> {
       s.signal_id, s.signal_date, s.signal_type, s.priority,
       s.payload, s.notified_at,
       g.app_id, g.title, g.genres, g.header_image_url,
-      snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank
+      snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank,
+      ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed
     FROM signals s
     JOIN games g USING(app_id)
     LEFT JOIN game_snapshots snap
       ON snap.app_id = s.app_id AND snap.snapshot_date = s.signal_date
+    LEFT JOIN publisher_stocks ps
+      ON ps.developer_name = g.developer
+      OR ps.developer_name = g.publisher
     WHERE s.signal_date >= CURRENT_DATE - 7
       AND s.signal_type != 'composite'
     ORDER BY s.signal_date DESC,

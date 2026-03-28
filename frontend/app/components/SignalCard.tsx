@@ -11,6 +11,10 @@ interface SignalCardProps {
     most_played_rank: number;
     concurrent_users: number;
     wishlist_rank: number;
+    company_name: string | null;
+    stock_ticker: string | null;
+    exchange: string | null;
+    is_listed: boolean | null;
   };
 }
 
@@ -73,6 +77,23 @@ export default function SignalCard({ signal }: SignalCardProps) {
                   {g}
                 </span>
               ))}
+            </div>
+          )}
+          {signal.is_listed && signal.stock_ticker && (
+            <div className="mt-2 flex items-center gap-1.5">
+              <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-mono">
+                📊 {signal.company_name}
+              </span>
+              <span className="text-xs text-gray-500 font-mono">
+                {signal.stock_ticker} · {signal.exchange}
+              </span>
+            </div>
+          )}
+          {signal.is_listed === false && signal.company_name && (
+            <div className="mt-2">
+              <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded font-mono">
+                🔒 {signal.company_name} · 비상장
+              </span>
             </div>
           )}
         </div>
