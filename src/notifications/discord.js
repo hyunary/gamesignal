@@ -23,10 +23,21 @@ async function sendSignalAlert(signal, game) {
   if (signal.notified_at) return; // 중복 발송 방지
   const cfg = SIGNAL_CONFIG[signal.signal_type] || { emoji: '📊', label: signal.signal_type, color: 0x888780 };
   const payload = signal.payload || {};
+  // 상장사 정보 조회
+  const { rows: stockRows } = await pool.query(`
+    SELECT ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed
+    FROM games g
+    LEFT JOIN publisher_stocks ps
+      ON ps.developer_name = g.developer
+      OR ps.developer_name = g.publisher
+    WHERE g.app_id = $1
+    LIMIT 1
+  `, [signal.app_id]);
+  const stock = stockRows[0] || null;
   // Discord Embed 메시지
   const embed = {
     title: `${cfg.emoji} ${game.title}`,
-    description: buildDescription(signal.signal_type, payload),
+    description: buildDescription(signal.signal_type, payload, stock),
     color: signal.priority === 'P0' ? cfg.color : 0x888780,
     fields: buildFields(signal.signal_type, payload, game),
     footer: {
@@ -49,23 +60,36 @@ async function sendSignalAlert(signal, game) {
   `, [signal.app_id, signal.signal_id, JSON.stringify(embed)]);
 }
 // 신호 타입별 설명 문구
-function buildDescription(signalType, payload) {
+function buildDescription(signalType, payload, stock) {
+  let desc;
   switch (signalType) {
     case 'new_entry_mp':
-      return `Steam Most Played Top 100에 **${payload.rank}위**로 첫 진입했습니다.\n동시접속자 **${(payload.concurrent_users || 0).toLocaleString()}명** 기록.`;
+      desc = `Steam Most Played Top 100에 **${payload.rank}위**로 첫 진입했습니다.\n동시접속자 **${(payload.concurrent_users || 0).toLocaleString()}명** 기록.`;
+      break;
     case 'new_entry_wl':
-      return `Steam Wishlist Top 50 **${payload.wishlist_rank}위**에 처음 등장했습니다.`;
+      desc = `Steam Wishlist Top 50 **${payload.wishlist_rank}위**에 처음 등장했습니다.`;
+      break;
     case 'traffic_revival':
-      return `**${payload.absent_days}일** 차트 이탈 후 오늘 복귀!\n7일 평균 대비 CCU **+${payload.ccu_pct}%** 급반등.`;
+      desc = `**${payload.absent_days}일** 차트 이탈 후 오늘 복귀!\n7일 평균 대비 CCU **+${payload.ccu_pct}%** 급반등.`;
+      break;
     case 'wishlist_surge':
-      return `위시리스트 순위 **${payload.prev_rank}위 → ${payload.curr_rank}위**\n**+${payload.change}계단** 급등!`;
+      desc = `위시리스트 순위 **${payload.prev_rank}위 → ${payload.curr_rank}위**\n**+${payload.change}계단** 급등!`;
+      break;
     case 'review_spike':
-      return `최근 30일 리뷰 **+${payload.review_pct}%** 급증\n긍정률 **${payload.pos_pct}%**`;
+      desc = `최근 30일 리뷰 **+${payload.review_pct}%** 급증\n긍정률 **${payload.pos_pct}%**`;
+      break;
     case 'composite':
-      return `**${payload.signal_count}개** 신호 동시 발동!\n${payload.composite_types?.join(' + ')}\n\n⚠️ 투자 판단 전 추가 검토를 권장합니다.`;
+      desc = `**${payload.signal_count}개** 신호 동시 발동!\n${payload.composite_types?.join(' + ')}\n\n⚠️ 투자 판단 전 추가 검토를 권장합니다.`;
+      break;
     default:
-      return '신호가 감지됐습니다.';
+      desc = '신호가 감지됐습니다.';
   }
+  if (stock?.is_listed && stock?.stock_ticker) {
+    desc += `\n\n📊 **${stock.company_name}** (${stock.stock_ticker} · ${stock.exchange})`;
+  } else if (stock && !stock.is_listed) {
+    desc += `\n\n🔒 **${stock.company_name}** · 비상장사`;
+  }
+  return desc;
 }
 // 신호 타입별 필드
 function buildFields(signalType, payload, game) {
