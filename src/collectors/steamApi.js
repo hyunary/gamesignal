@@ -24,7 +24,14 @@ async function fetchAppDetails(appId) {
     title:           d.name,
     developer:       d.developers?.[0] ?? null,
     publisher:       d.publishers?.[0] ?? null,
-    releaseDate:     d.release_date?.date ?? null,
+    releaseDate: (() => {
+      const raw = d.release_date?.date;
+      if (!raw || raw.trim() === '' || raw.toLowerCase().includes('announced')) return null;
+      // 날짜 형식 검증
+      const parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) return null;
+      return raw;
+    })(),
     genres:          d.genres?.map(g => g.description) ?? [],
     tags:            d.categories?.map(c => c.description) ?? [],
     isEarlyAccess:   d.genres?.some(g => g.description === 'Early Access') ?? false,
