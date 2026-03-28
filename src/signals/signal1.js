@@ -9,6 +9,7 @@ async function detectNewEntry(today) {
       s.app_id, g.title,
       s.most_played_rank, s.concurrent_users,
       s.wishlist_rank, s.is_new_entry_mp, s.is_new_entry_wl,
+      s.is_first_ever_entry_mp,
       g.genres
     FROM game_snapshots s
     JOIN games g USING(app_id)
@@ -30,7 +31,8 @@ async function detectNewEntry(today) {
       const ok = await emitSignal(row.app_id, today, 'new_entry_mp', 'P0', {
         rank: row.most_played_rank,
         concurrent_users: row.concurrent_users,
-        genres: row.genres
+        genres: row.genres,
+        is_first_ever: row.is_first_ever_entry_mp
       });
       if (ok) {
         console.log(`    ✅ new_entry_mp: ${row.title} (${row.most_played_rank}위)`);

@@ -15,6 +15,7 @@ interface SignalCardProps {
     stock_ticker: string | null;
     exchange: string | null;
     is_listed: boolean | null;
+    is_first_ever_entry_mp: boolean | null;
     positive_pct: number | null;
     neutral_pct: number | null;
     negative_pct: number | null;
@@ -56,6 +57,15 @@ export default function SignalCard({ signal }: SignalCardProps) {
             }`}>
               {signal.priority}
             </span>
+            {signal.signal_type === 'new_entry_mp' && (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                signal.is_first_ever_entry_mp
+                  ? 'bg-green-900 text-green-300'
+                  : 'bg-gray-700 text-gray-400'
+              }`}>
+                {signal.is_first_ever_entry_mp ? '🆕 역대 첫 진입' : '🔄 재진입'}
+              </span>
+            )}
           </div>
           <p className="text-gray-400 text-sm mb-2">{cfg.label}</p>
           <div className="flex flex-wrap gap-3 text-xs text-gray-500">

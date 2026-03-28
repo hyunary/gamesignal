@@ -11,25 +11,37 @@ async function upsertGame(appId, title) {
 }
 // 스냅샷 UPSERT + 신규 진입 자동 감지
 async function upsertSnapshot(appId, rank, ccu, peak, date) {
+  // 역대 첫 진입 여부 확인
+  const { rows: histRows } = await pool.query(`
+    SELECT COUNT(*) as cnt
+    FROM game_snapshots
+    WHERE app_id = $1
+      AND snapshot_date < $2
+      AND most_played_rank IS NOT NULL
+  `, [appId, date]);
+  const isFirstEver = parseInt(histRows[0].cnt) === 0;
+
   await pool.query(`
     INSERT INTO game_snapshots
       (app_id, snapshot_date, most_played_rank, concurrent_users,
-       peak_users_today, is_new_entry_mp)
+       peak_users_today, is_new_entry_mp, is_first_ever_entry_mp)
     VALUES ($1, $2, $3, $4, $5,
       NOT EXISTS (
         SELECT 1 FROM game_snapshots
         WHERE app_id = $1
           AND snapshot_date = $2::date - 1
           AND most_played_rank IS NOT NULL
-      )
+      ),
+      $6
     )
     ON CONFLICT (app_id, snapshot_date) DO UPDATE SET
-      most_played_rank = EXCLUDED.most_played_rank,
-      concurrent_users = EXCLUDED.concurrent_users,
-      peak_users_today = EXCLUDED.peak_users_today,
-      is_new_entry_mp  = EXCLUDED.is_new_entry_mp,
-      collected_at     = NOW()
-  `, [appId, date, rank, ccu, peak]);
+      most_played_rank       = EXCLUDED.most_played_rank,
+      concurrent_users       = EXCLUDED.concurrent_users,
+      peak_users_today       = EXCLUDED.peak_users_today,
+      is_new_entry_mp        = EXCLUDED.is_new_entry_mp,
+      is_first_ever_entry_mp = EXCLUDED.is_first_ever_entry_mp,
+      collected_at           = NOW()
+  `, [appId, date, rank, ccu, peak, isFirstEver]);
 }
 // pipeline_runs 시작 기록
 async function startPipelineRun(source) {

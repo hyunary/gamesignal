@@ -63,9 +63,13 @@ async function sendSignalAlert(signal, game) {
 function buildDescription(signalType, payload, stock) {
   let desc;
   switch (signalType) {
-    case 'new_entry_mp':
-      desc = `Steam Most Played Top 100에 **${payload.rank}위**로 첫 진입했습니다.\n동시접속자 **${(payload.concurrent_users || 0).toLocaleString()}명** 기록.`;
+    case 'new_entry_mp': {
+      const badge = payload.is_first_ever
+        ? '🆕 **[역대 첫 진입]**'
+        : '🔄 **[재진입]**';
+      desc = `${badge} Steam Most Played Top 100에 **${payload.rank}위**로 진입했습니다.\n동시접속자 **${(payload.concurrent_users || 0).toLocaleString()}명** 기록.`;
       break;
+    }
     case 'new_entry_wl':
       desc = `Steam Wishlist Top 50 **${payload.wishlist_rank}위**에 처음 등장했습니다.`;
       break;
