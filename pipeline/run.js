@@ -1,76 +1,70 @@
-const { collectAppDetails } = require('../src/collectors/steamApi');
-const { retryWithBackoff } = require('../src/utils/retry');
-const { fallbackToPreviousDay } = require('../src/utils/fallback');
+const { runSignalEngine } = require('../src/signals/engine');
 const { sendPipelineAlert } = require('../src/notifications/discord');
+
 if (!process.env.DATABASE_URL) {
   require('dotenv').config();
 }
-// 동적 require (각 수집기)
-const mostPlayed = require('../src/collectors/mostPlayed');
-const wishlist   = require('../src/collectors/wishlist');
-const reviews    = require('../src/collectors/reviews');
-const { runSignalEngine } = require('../src/signals/engine');
+
+const { execSync } = require('child_process');
+
+async function runStep(command, label) {
+  try {
+    console.log(`\n[${label}] 실행 중...`);
+    execSync(command, { stdio: 'inherit', cwd: process.cwd() });
+    console.log(`[${label}] 완료 ✅`);
+  } catch (err) {
+    console.error(`[${label}] 실패:`, err.message);
+    await sendPipelineAlert(label, err.message).catch(() => {});
+  }
+}
+
 async function runPipeline() {
   const startTime = Date.now();
+
+  // KST 기준 오늘 날짜
+  const kstTime = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = kstTime.toISOString().split('T')[0];
+
   console.log('\n🚀 GameSignal 파이프라인 시작');
   console.log(`📅 실행 시각: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} KST`);
+  console.log(`📅 기준일: ${today}`);
   console.log('═'.repeat(50));
-  // 전체 타임아웃 60분
+
+  // 전체 타임아웃 80분
   const timeout = setTimeout(async () => {
-    console.error('⏰ 파이프라인 타임아웃 (60분 초과)');
-    await sendPipelineAlert('pipeline', '60분 타임아웃 초과');
+    console.error('⏰ 파이프라인 타임아웃 (80분 초과)');
+    await sendPipelineAlert('pipeline', '80분 타임아웃 초과').catch(() => {});
     process.exit(1);
-  }, 60 * 60 * 1000);
+  }, 80 * 60 * 1000);
+
   try {
-    // 1단계: Most Played 수집
-    console.log('\n[1/5] Most Played Top 100 수집...');
-    await retryWithBackoff(
-      () => {
-        // mostPlayed.js를 모듈로 사용
-        const { chromium } = require('playwright-extra');
-        const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-        const { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun } = require('../src/db/queries');
-        chromium.use(StealthPlugin());
-        return require('../src/collectors/mostPlayed').scrapeMostPlayed
-          ? require('../src/collectors/mostPlayed').scrapeMostPlayed()
-          : Promise.resolve();
-      },
-      {
-        label: 'most_played',
-        onFail: async () => fallbackToPreviousDay('most_played')
-      }
-    ).catch(async () => {
-      await sendPipelineAlert('most_played', 'IP 차단 또는 수집 실패');
-    });
-    // 2단계: Wishlist 수집
-    console.log('\n[2/5] Wishlist Top 50 수집...');
-    const { execSync } = require('child_process');
+    // 1단계: Most Played
     await runStep('node src/collectors/mostPlayed.js', '1/5 Most Played');
-    await runStep('node src/collectors/wishlist.js',   '2/5 Wishlist');
-    await runStep('node src/collectors/reviews.js',    '3/5 리뷰');
-    await runStep('node src/collectors/steamApi.js',   '4/5 appdetails');
-    // 5단계: 신호 엔진
+
+    // 2단계: Wishlist
+    await runStep('node src/collectors/wishlist.js', '2/5 Wishlist');
+
+    // 3단계: 리뷰
+    await runStep('node src/collectors/reviews.js', '3/5 리뷰');
+
+    // 4단계: appdetails
+    await runStep('node src/collectors/steamApi.js', '4/5 appdetails');
+
+    // 5단계: 신호 엔진 (날짜 인자 제거 — 내부에서 KST 계산)
     console.log('\n[5/5] 신호 엔진 실행...');
-    await runSignalEngine(new Date().toISOString().split('T')[0]);
+    await runSignalEngine();
+
     const duration = Math.round((Date.now() - startTime) / 1000);
     console.log(`\n✅ 전체 파이프라인 완료 (${duration}초)`);
+
   } catch (err) {
     console.error('❌ 파이프라인 실패:', err.message);
-    await sendPipelineAlert('pipeline', err.message);
+    await sendPipelineAlert('pipeline', err.message).catch(() => {});
     process.exit(1);
   } finally {
     clearTimeout(timeout);
     process.exit(0);
   }
 }
-async function runStep(command, label) {
-  const { execSync } = require('child_process');
-  try {
-    console.log(`\n[${label}] 실행 중...`);
-    execSync(command, { stdio: 'inherit', cwd: process.cwd() });
-  } catch (err) {
-    console.error(`[${label}] 실패:`, err.message);
-    await sendPipelineAlert(label, err.message);
-  }
-}
+
 runPipeline();
