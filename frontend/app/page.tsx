@@ -100,7 +100,14 @@ export default async function Dashboard() {
                     <span className="text-gray-600 font-mono w-5 text-right text-xs">
                       {game.most_played_rank}
                     </span>
-                    <span className="text-gray-300 truncate flex-1">{game.title}</span>
+                    <a
+                      href={`https://store.steampowered.com/app/${game.app_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-300 truncate flex-1 hover:text-green-400 transition-colors"
+                    >
+                      {game.title}
+                    </a>
                     <span className="text-gray-500 text-xs flex-shrink-0">
                       {Number(game.concurrent_users).toLocaleString()}
                     </span>

@@ -3,6 +3,7 @@ interface SignalCardProps {
     signal_id: string;
     signal_type: string;
     priority: string;
+    app_id: number;
     title: string;
     signal_date: string;
     payload: any;
@@ -51,7 +52,14 @@ export default function SignalCard({ signal }: SignalCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">{cfg.emoji}</span>
-            <span className="text-white font-semibold truncate">{signal.title}</span>
+            <a
+              href={`https://store.steampowered.com/app/${signal.app_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white font-semibold truncate hover:text-green-400 transition-colors cursor-pointer"
+            >
+              {signal.title}
+            </a>
             <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
               signal.priority === 'P0' ? 'bg-red-900 text-red-300' : 'bg-yellow-900 text-yellow-300'
             }`}>
