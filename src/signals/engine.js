@@ -8,7 +8,11 @@ const { startPipelineRun, finishPipelineRun } = require('../db/queries');
 const { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert } = require('../notifications/discord');
 const { analyzeGameSentiment } = require('../collectors/youtubeSentiment');
 async function runSignalEngine(date) {
-  const today = new Date().toISOString().split('T')[0]; // 항상 오늘
+  // KST 기준 오늘 날짜 (UTC+9)
+  const now = new Date();
+  const kstOffset = 9 * 60; // KST = UTC+9
+  const kstTime = new Date(now.getTime() + kstOffset * 60 * 1000);
+  const today = kstTime.toISOString().split('T')[0];
   console.log(`기준일: ${today} (실행 시각: ${new Date().toLocaleString('ko-KR', {timeZone: 'Asia/Seoul'})} KST)`);
   const runId = await startPipelineRun('signal_engine');
   let totalSignals = 0;

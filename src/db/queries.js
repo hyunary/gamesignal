@@ -45,7 +45,11 @@ async function upsertSnapshot(appId, rank, ccu, peak, date) {
 }
 // pipeline_runs 시작 기록
 async function startPipelineRun(source) {
-  const today = new Date().toISOString().split('T')[0];
+  // KST 기준 오늘 날짜 (UTC+9)
+  const now = new Date();
+  const kstOffset = 9 * 60; // KST = UTC+9
+  const kstTime = new Date(now.getTime() + kstOffset * 60 * 1000);
+  const today = kstTime.toISOString().split('T')[0];
   const { rows } = await pool.query(`
     INSERT INTO pipeline_runs (run_date, source, status)
     VALUES ($1::date, $2, 'running')
