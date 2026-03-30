@@ -101,6 +101,53 @@ export async function getPipelineStatus(): Promise<PipelineRun[]> {
   return rows;
 }
 
+export interface NewsClip {
+  id: number;
+  clip_date: string;
+  category: string;
+  importance: string;
+  title: string;
+  summary: string;
+  analyst_comment: string | null;
+  source_url: string | null;
+  related_ticker: string | null;
+  related_company: string | null;
+}
+
+export interface NewsSummary {
+  clip_date: string;
+  summary: string;
+}
+
+export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[]; summary: NewsSummary | null }> {
+  const orderClause = `
+    ORDER BY
+      CASE importance WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+      category,
+      created_at
+  `;
+
+  const { rows: clips } = date
+    ? await pool.query(`SELECT * FROM news_clips WHERE clip_date = $1 ${orderClause}`, [date])
+    : await pool.query(`SELECT * FROM news_clips WHERE clip_date = CURRENT_DATE ${orderClause}`);
+
+  const { rows: summaries } = date
+    ? await pool.query(`SELECT * FROM news_summaries WHERE clip_date = $1 LIMIT 1`, [date])
+    : await pool.query(`SELECT * FROM news_summaries WHERE clip_date = CURRENT_DATE LIMIT 1`);
+
+  return { clips, summary: summaries[0] || null };
+}
+
+export async function getNewsDateList(): Promise<string[]> {
+  const { rows } = await pool.query(`
+    SELECT DISTINCT clip_date
+    FROM news_clips
+    ORDER BY clip_date DESC
+    LIMIT 30
+  `);
+  return rows.map(r => r.clip_date);
+}
+
 export async function getTopGames() {
   const { rows } = await pool.query(`
     SELECT

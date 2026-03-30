@@ -1,6 +1,7 @@
 import { getTodaySignals, getRecentSignals, getPipelineStatus, getTopGames } from './lib/queries';
 import SignalCard from './components/SignalCard';
 import PipelineStatus from './components/PipelineStatus';
+import Link from 'next/link';
 
 export const revalidate = 300; // 5분마다 갱신
 
@@ -27,11 +28,19 @@ export default async function Dashboard() {
             </h1>
             <p className="text-gray-500 text-xs mt-0.5">Steam 게임 트래픽 신호 감지</p>
           </div>
-          <div className="text-right">
-            <p className="text-gray-400 text-sm">{today}</p>
-            <p className="text-gray-600 text-xs">
-              오늘 신호 {todaySignals.length}개
-            </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/news"
+              className="text-gray-400 hover:text-yellow-400 transition-colors text-sm font-mono"
+            >
+              📰 뉴스
+            </Link>
+            <div className="text-right">
+              <p className="text-gray-400 text-sm">{today}</p>
+              <p className="text-gray-600 text-xs">
+                오늘 신호 {todaySignals.length}개
+              </p>
+            </div>
           </div>
         </div>
       </header>
