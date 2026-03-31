@@ -50,7 +50,7 @@ export default function SignalCard({ signal }: { signal: any }) {
   const payload = signal.payload || {};
 
   return (
-    <div className={`relative bg-white/[0.03] border ${cfg.border} rounded-xl p-5 backdrop-blur-sm ${cfg.glow} hover:bg-white/[0.05] transition-all group`}>
+    <div className={`signal-card-hover relative bg-white/[0.03] border ${cfg.border} rounded-xl p-5 backdrop-blur-sm ${cfg.glow} hover:bg-white/[0.05] hover:shadow-[0_0_30px_rgba(0,212,255,0.08)] transition-all group`}>
 
       {/* 우측 상단 우선순위 배지 */}
       <div className="absolute top-4 right-4 flex items-center gap-2">

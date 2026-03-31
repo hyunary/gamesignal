@@ -23,7 +23,7 @@ export default async function Home() {
   const totalCount = pipelineStatus.length;
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-gray-100" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
+    <div className="min-h-screen bg-[#070B14] text-gray-100 bg-grid" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
 
       {/* 상단 주가 티커 */}
       <StockTicker />
@@ -61,6 +61,9 @@ export default async function Home() {
           </div>
         </div>
       </header>
+
+      <div className="glow-cyan" />
+      <div className="glow-purple" />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
 
