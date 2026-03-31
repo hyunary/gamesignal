@@ -1,6 +1,7 @@
 import { getNewsByDate, getNewsDateList, NewsClip } from '../lib/queries';
 import Link from 'next/link';
 
+
 export const revalidate = 0;
 
 const IMPORTANCE_CONFIG = {
@@ -22,27 +23,23 @@ export default async function NewsPage() {
   const newgameClips  = clips.filter(c => c.category === 'newgame');
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      {/* 헤더 */}
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+    <main className="min-h-screen bg-[#070B14] text-gray-100 bg-grid">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/" className="text-gray-400 text-sm hover:text-white transition-colors">
-              ← 대시보드
-            </Link>
-            <h1 className="text-xl font-bold font-mono mt-1">
-              <span className="text-yellow-400">📰</span> 게임 뉴스 클리핑
+            <h1 className="text-lg font-black tracking-tighter uppercase">
+              📰 게임 뉴스 <span className="text-yellow-400">클리핑</span>
             </h1>
-            <p className="text-gray-500 text-xs mt-0.5">인벤 · VC/애널리스트 관점 분석</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">인벤 · VC/애널리스트 관점 분석</p>
           </div>
-          <div className="text-right">
-            <p className="text-gray-400 text-sm">{today}</p>
-            <p className="text-gray-600 text-xs">{clips.length}개 뉴스</p>
+          <div className="text-right text-xs text-gray-500 font-mono">
+            <p>{today}</p>
+            <p className="text-gray-600">{clips.length}개 뉴스</p>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6">
+      <div className="max-w-4xl mx-auto px-6 pb-8">
         {clips.length === 0 ? (
           <div className="bg-gray-900 rounded-lg p-12 text-center text-gray-600">
             <p className="text-3xl mb-3">📭</p>

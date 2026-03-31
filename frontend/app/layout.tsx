@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import Header from './components/Header';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,7 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className="dark">
-      <body className={`${inter.className} bg-gray-950`}>{children}</body>
+      <body className={`${inter.className} bg-[#070B14] text-gray-100`} style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }
