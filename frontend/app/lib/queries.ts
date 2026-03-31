@@ -135,7 +135,20 @@ export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[];
     ? await pool.query(`SELECT * FROM news_summaries WHERE clip_date = $1 LIMIT 1`, [date])
     : await pool.query(`SELECT * FROM news_summaries WHERE clip_date = CURRENT_DATE LIMIT 1`);
 
-  return { clips, summary: summaries[0] || null };
+  const toDateStr = (v: unknown) =>
+    v instanceof Date ? v.toISOString().split('T')[0] : (v as string);
+
+  const normalizedClips = clips.map(r => ({
+    ...r,
+    clip_date: toDateStr(r.clip_date),
+  }));
+
+  const rawSummary = summaries[0] || null;
+  const normalizedSummary = rawSummary
+    ? { ...rawSummary, clip_date: toDateStr(rawSummary.clip_date) }
+    : null;
+
+  return { clips: normalizedClips, summary: normalizedSummary };
 }
 
 export async function getNewsDateList(): Promise<string[]> {
@@ -145,7 +158,9 @@ export async function getNewsDateList(): Promise<string[]> {
     ORDER BY clip_date DESC
     LIMIT 30
   `);
-  return rows.map(r => r.clip_date);
+  return rows.map(r =>
+    r.clip_date instanceof Date ? r.clip_date.toISOString().split('T')[0] : r.clip_date
+  );
 }
 
 export async function getTopGames() {
