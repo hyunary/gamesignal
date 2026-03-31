@@ -1,19 +1,10 @@
 import { getTodaySignals, getRecentSignals, getPipelineStatus, getTopGames } from './lib/queries';
 import SignalCard from './components/SignalCard';
+import StockTicker from './components/StockTicker';
 import Link from 'next/link';
 
 export const revalidate = 0;
 
-const TICKER_STOCKS = [
-  { name: 'KRAFTON', ticker: '259960.KS' },
-  { name: 'PEARL ABYSS', ticker: '263750.KS' },
-  { name: 'NEXON', ticker: '3659.T' },
-  { name: 'NCSOFT', ticker: '036570.KS' },
-  { name: 'NETMARBLE', ticker: '251270.KS' },
-  { name: 'EA', ticker: 'EA' },
-  { name: 'TAKE-TWO', ticker: 'TTWO' },
-  { name: 'UBISOFT', ticker: 'UBI.PA' },
-];
 
 export default async function Home() {
   const [todaySignals, recentSignals, pipelineStatus, topGames] = await Promise.all([
@@ -35,17 +26,7 @@ export default async function Home() {
     <div className="min-h-screen bg-[#070B14] text-gray-100" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
 
       {/* 상단 주가 티커 */}
-      <div className="bg-black/60 border-b border-cyan-500/20 overflow-hidden py-2">
-        <div className="flex animate-marquee whitespace-nowrap">
-          {[...TICKER_STOCKS, ...TICKER_STOCKS].map((stock, i) => (
-            <span key={i} className="inline-flex items-center gap-2 mx-8 text-xs">
-              <span className="text-cyan-400 font-bold">{stock.name}</span>
-              <span className="text-gray-500">{stock.ticker}</span>
-              <span className="text-gray-600">●</span>
-            </span>
-          ))}
-        </div>
-      </div>
+      <StockTicker />
 
       {/* 헤더 */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
