@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import StockTicker from './StockTicker';
+import NavLinks from './NavLinks';
 
 async function getPipelineStatus() {
   const { getPipelineStatus } = await import('../lib/queries');
@@ -38,14 +38,7 @@ export default async function Header() {
             </div>
           </div>
 
-          <nav className="flex items-center gap-6 text-xs uppercase tracking-widest">
-            <Link href="/" className="text-gray-500 hover:text-cyan-400 transition-colors">
-              Dashboard
-            </Link>
-            <Link href="/news" className="text-gray-500 hover:text-cyan-400 transition-colors">
-              News
-            </Link>
-          </nav>
+          <NavLinks />
 
           <div className="flex items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
