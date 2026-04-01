@@ -65,7 +65,9 @@ async function calcReviewSpike(appId, today, review30d, reviewTotal) {
 }
 async function collectReviews() {
   console.log('📝 Steam 리뷰 수집 시작...');
-  const today = new Date().toISOString().split('T')[0];
+  // KST 기준 오늘 날짜 (UTC+9)
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const today = kst.toISOString().split('T')[0];
   // 오늘 수집된 게임 대상 (Most Played + Wishlist 합집합)
   const { rows: targets } = await pool.query(`
     SELECT DISTINCT g.app_id, g.title

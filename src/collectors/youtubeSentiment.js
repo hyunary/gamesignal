@@ -122,7 +122,9 @@ async function analyzeGameSentiment(appId, gameTitle) {
     console.log(`  ✅ 긍정 ${positivePct}% / 중립 ${neutralPct}% / 부정 ${negativePct}%`);
 
     // DB 저장
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜 (UTC+9)
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = kst.toISOString().split('T')[0];
     await pool.query(`
       INSERT INTO youtube_sentiment
         (app_id, analysis_date, video_id, video_title, video_url,

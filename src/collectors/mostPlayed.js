@@ -109,7 +109,9 @@ async function scrapeMostPlayed() {
     });
     // DB 저장
     console.log('\n💾 DB 저장 중...');
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜 (UTC+9)
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = kst.toISOString().split('T')[0];
     const runId = await startPipelineRun('most_played');
 
     let saved = 0;
