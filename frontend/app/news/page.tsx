@@ -27,10 +27,10 @@ export default async function NewsPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-lg font-black tracking-tighter uppercase">
+            <h1 className="text-xl font-black tracking-tighter uppercase">
               📰 게임 뉴스 <span className="text-yellow-400">클리핑</span>
             </h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">인벤 · VC/애널리스트 관점 분석</p>
+            <p className="text-xs text-gray-500 uppercase tracking-widest mt-0.5">인벤 · VC/애널리스트 관점 분석</p>
           </div>
           <div className="text-right text-xs text-gray-500 font-mono">
             <p>{today}</p>
@@ -43,8 +43,8 @@ export default async function NewsPage() {
         {clips.length === 0 ? (
           <div className="bg-gray-900 rounded-lg p-12 text-center text-gray-600">
             <p className="text-3xl mb-3">📭</p>
-            <p className="text-lg">오늘 수집된 뉴스가 없습니다</p>
-            <p className="text-sm mt-2">Claude Code에서 &ldquo;인벤 뉴스 분석해줘&rdquo;를 실행해주세요</p>
+            <p className="text-xl">오늘 수집된 뉴스가 없습니다</p>
+            <p className="text-base mt-2">Claude Code에서 &ldquo;인벤 뉴스 분석해줘&rdquo;를 실행해주세요</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -57,7 +57,7 @@ export default async function NewsPage() {
                 </h2>
                 <div className="space-y-1.5">
                   {summary.summary.split('\n').map((line, i) => (
-                    <p key={i} className="text-gray-300 text-sm leading-relaxed">{line}</p>
+                    <p key={i} className="text-gray-300 text-base leading-relaxed">{line}</p>
                   ))}
                 </div>
               </div>
@@ -136,11 +136,11 @@ function NewsCard({ clip }: { clip: NewsClip }) {
 
       <h3 className="text-white font-semibold mb-2 leading-snug">{clip.title}</h3>
 
-      <p className="text-gray-400 text-sm mb-3 leading-relaxed">{clip.summary}</p>
+      <p className="text-gray-400 text-base mb-3 leading-relaxed">{clip.summary}</p>
 
       {clip.analyst_comment && (
         <div className="bg-gray-800 rounded p-3 border-l-2 border-yellow-600">
-          <p className="text-yellow-200 text-xs leading-relaxed">
+          <p className="text-yellow-200 text-sm leading-relaxed">
             💡 <span className="italic">{clip.analyst_comment}</span>
           </p>
         </div>
@@ -152,7 +152,7 @@ function NewsCard({ clip }: { clip: NewsClip }) {
             href={clip.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            className="text-sm text-gray-600 hover:text-gray-400 transition-colors"
           >
             원문 보기 →
           </a>

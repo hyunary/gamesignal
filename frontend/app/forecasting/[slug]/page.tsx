@@ -45,7 +45,7 @@ export default async function ForecastDetailPage({
                 {forecast.release_date && <span>· {forecast.release_date}</span>}
               </div>
               {forecast.summary && (
-                <p className="text-gray-400 text-sm mt-3">{forecast.summary}</p>
+                <p className="text-gray-400 text-base mt-3">{forecast.summary}</p>
               )}
             </div>
             {forecast.app_id && (
@@ -131,13 +131,13 @@ export default async function ForecastDetailPage({
                       </div>
 
                       {/* 마크다운 내용을 단락으로 렌더링 */}
-                      <div className="text-gray-400 text-sm leading-relaxed space-y-2">
+                      <div className="text-gray-400 text-base leading-relaxed space-y-2">
                         {thread.content.split('\n').filter(Boolean).map((line, j) => (
                           <p key={j} className={
-                            line.startsWith('##') ? 'text-gray-300 font-bold text-xs uppercase tracking-widest mt-3' :
-                            line.startsWith('#') ? 'text-gray-200 font-black text-sm mt-3' :
-                            line.startsWith('- ') ? 'pl-3 border-l border-white/10 text-gray-500 text-xs' :
-                            'text-gray-400 text-xs'
+                            line.startsWith('##') ? 'text-gray-300 font-bold text-sm uppercase tracking-widest mt-3' :
+                            line.startsWith('#') ? 'text-gray-200 font-black text-base mt-3' :
+                            line.startsWith('- ') ? 'pl-3 border-l border-white/10 text-gray-500 text-sm' :
+                            'text-gray-400 text-sm'
                           }>
                             {line.replace(/^#{1,3} /, '').replace(/^- /, '')}
                           </p>
