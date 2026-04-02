@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" className="dark">
-      <body className={`${inter.className} bg-[#070B14] text-gray-100`} style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
+      <body className={`${inter.className} bg-[#070B14] text-gray-100`} style={{ fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif", fontSize: '16px' }}>
         <Header />
         {children}
       </body>
