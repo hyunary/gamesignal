@@ -123,7 +123,31 @@ export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[];
   // KST 기준 오늘 날짜 계산 (UTC+9)
   const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000)
     .toISOString().split('T')[0];
-  const dateParam = date ?? kstDate;
+
+  // 오늘 날짜 지정 or 명시적 date 파라미터
+  const targetDate = date || kstDate;
+
+  // 해당 날짜에 데이터가 없으면 가장 최근 날짜로 fallback
+  const { rows: dateCheck } = await pool.query(`
+    SELECT clip_date::text FROM news_clips
+    WHERE clip_date = $1
+    LIMIT 1
+  `, [targetDate]);
+
+  let dateParam: string;
+  if (dateCheck.length > 0) {
+    dateParam = targetDate;
+  } else {
+    // 가장 최근 날짜 조회
+    const { rows: latestDate } = await pool.query(`
+      SELECT clip_date::text FROM news_clips
+      ORDER BY clip_date DESC
+      LIMIT 1
+    `);
+    dateParam = latestDate.length > 0
+      ? latestDate[0].clip_date
+      : targetDate;
+  }
 
   const orderClause = `
     ORDER BY
