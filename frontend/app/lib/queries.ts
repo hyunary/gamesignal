@@ -120,6 +120,11 @@ export interface NewsSummary {
 }
 
 export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[]; summary: NewsSummary | null }> {
+  // KST 기준 오늘 날짜 계산 (UTC+9)
+  const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    .toISOString().split('T')[0];
+  const dateParam = date ?? kstDate;
+
   const orderClause = `
     ORDER BY
       CASE importance WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
@@ -127,13 +132,15 @@ export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[];
       created_at
   `;
 
-  const { rows: clips } = date
-    ? await pool.query(`SELECT * FROM news_clips WHERE clip_date = $1 ${orderClause}`, [date])
-    : await pool.query(`SELECT * FROM news_clips WHERE clip_date = CURRENT_DATE ${orderClause}`);
+  const { rows: clips } = await pool.query(
+    `SELECT * FROM news_clips WHERE clip_date = $1 ${orderClause}`,
+    [dateParam]
+  );
 
-  const { rows: summaries } = date
-    ? await pool.query(`SELECT * FROM news_summaries WHERE clip_date = $1 LIMIT 1`, [date])
-    : await pool.query(`SELECT * FROM news_summaries WHERE clip_date = CURRENT_DATE LIMIT 1`);
+  const { rows: summaries } = await pool.query(
+    `SELECT * FROM news_summaries WHERE clip_date = $1 LIMIT 1`,
+    [dateParam]
+  );
 
   const toDateStr = (v: unknown) =>
     v instanceof Date ? v.toISOString().split('T')[0] : (v as string);
