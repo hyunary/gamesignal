@@ -28,6 +28,16 @@ export default function NavLinks() {
       >
         News
       </Link>
+      <Link
+        href="/forecasting"
+        className={`transition-colors pb-0.5 ${
+          pathname === '/forecasting' || pathname.startsWith('/forecasting/')
+            ? 'text-cyan-400 border-b border-cyan-400'
+            : 'text-gray-500 hover:text-cyan-400'
+        }`}
+      >
+        Forecasting
+      </Link>
     </nav>
   );
 }

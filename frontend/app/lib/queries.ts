@@ -170,6 +170,92 @@ export async function getNewsDateList(): Promise<string[]> {
   );
 }
 
+export interface Forecast {
+  id: number;
+  game_slug: string;
+  game_title: string;
+  app_id: number | null;
+  developer: string | null;
+  publisher: string | null;
+  platform: string | null;
+  genre: string | null;
+  release_date: string | null;
+  bear_min: number | null;
+  base_min: number | null;
+  base_max: number | null;
+  bull_max: number | null;
+  game_pass: boolean;
+  status: string;
+  cover_image_url: string | null;
+  summary: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForecastThread {
+  id: number;
+  forecast_id: number;
+  milestone_type: string;
+  milestone_label: string;
+  content: string;
+  updated_bear_min: number | null;
+  updated_base_min: number | null;
+  updated_base_max: number | null;
+  updated_bull_max: number | null;
+  thread_date: string;
+  created_at: string;
+}
+
+export async function getAllForecasts(): Promise<Forecast[]> {
+  const { rows } = await pool.query(`
+    SELECT * FROM forecasts
+    WHERE status != 'draft'
+    ORDER BY updated_at DESC
+  `);
+  return rows.map(r => ({
+    ...r,
+    release_date: r.release_date
+      ? new Date(r.release_date.getTime ? r.release_date.getTime() + 9*60*60*1000 : r.release_date)
+          .toISOString().split('T')[0]
+      : null,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at,
+  }));
+}
+
+export async function getForecastBySlug(slug: string): Promise<{ forecast: Forecast; threads: ForecastThread[] } | null> {
+  const { rows: forecasts } = await pool.query(`
+    SELECT * FROM forecasts WHERE game_slug = $1
+  `, [slug]);
+
+  if (forecasts.length === 0) return null;
+
+  const forecast = {
+    ...forecasts[0],
+    release_date: forecasts[0].release_date
+      ? new Date(forecasts[0].release_date.getTime ? forecasts[0].release_date.getTime() + 9*60*60*1000 : forecasts[0].release_date)
+          .toISOString().split('T')[0]
+      : null,
+    created_at: forecasts[0].created_at instanceof Date ? forecasts[0].created_at.toISOString() : forecasts[0].created_at,
+    updated_at: forecasts[0].updated_at instanceof Date ? forecasts[0].updated_at.toISOString() : forecasts[0].updated_at,
+  };
+
+  const { rows: threads } = await pool.query(`
+    SELECT * FROM forecast_threads
+    WHERE forecast_id = $1
+    ORDER BY thread_date ASC, created_at ASC
+  `, [forecast.id]);
+
+  return {
+    forecast,
+    threads: threads.map(t => ({
+      ...t,
+      thread_date: t.thread_date instanceof Date ? t.thread_date.toISOString().split('T')[0] : t.thread_date,
+      created_at: t.created_at instanceof Date ? t.created_at.toISOString() : t.created_at,
+    }))
+  };
+}
+
 export async function getTopGames() {
   const { rows } = await pool.query(`
     SELECT
