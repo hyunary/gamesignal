@@ -15,6 +15,9 @@ const TICKERS = [
   { name: 'CAPCOM', ticker: '9697.T', currency: '¥' },
   { name: 'BANDAI NAMCO', ticker: '7832.T', currency: '¥' },
   { name: 'NEOWIZ', ticker: '095660.KS', currency: '₩' },
+  { name: 'KAKAO GAMES', ticker: '293490.KS', currency: '₩' },
+  { name: 'DEVSISTERS', ticker: '194480.KS', currency: '₩' },
+  { name: 'SHIFT UP', ticker: '462870.KS', currency: '₩' },
 ];
 
 export async function GET() {
