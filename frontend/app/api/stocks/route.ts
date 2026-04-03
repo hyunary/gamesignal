@@ -14,6 +14,7 @@ const TICKERS = [
   { name: 'UBISOFT', ticker: 'UBI.PA', currency: '€' },
   { name: 'CAPCOM', ticker: '9697.T', currency: '¥' },
   { name: 'BANDAI NAMCO', ticker: '7832.T', currency: '¥' },
+  { name: 'NEOWIZ', ticker: '095660.KS', currency: '₩' },
 ];
 
 export async function GET() {
