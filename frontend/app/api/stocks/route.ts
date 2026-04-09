@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import YahooFinanceClass from 'yahoo-finance2';
 
@@ -44,7 +46,7 @@ export async function GET() {
     });
 
     return NextResponse.json(stocks, {
-      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate' }
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
     });
   } catch {
     return NextResponse.json(
