@@ -20,6 +20,7 @@ const TICKERS = [
   { name: 'KAKAO GAMES', ticker: '293490.KS', currency: '₩' },
   { name: 'DEVSISTERS', ticker: '194480.KS', currency: '₩' },
   { name: 'SHIFT UP', ticker: '462870.KS', currency: '₩' },
+  { name: 'JOYCITY', ticker: '067000.KS', currency: '₩' },
 ];
 
 export async function GET() {
