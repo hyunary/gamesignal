@@ -12,6 +12,9 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      fontFamily: {
+        mono: ['Noto Sans Mono', 'Consolas', 'Courier New', 'monospace'],
+      },
     },
   },
   plugins: [],
