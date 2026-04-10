@@ -55,16 +55,16 @@ export default function SignalCard({ signal }: { signal: any }) {
       {/* 우측 상단 우선순위 배지 */}
       <div className="absolute top-4 right-4 flex items-center gap-2">
         {signal.is_first_ever_entry_mp && (
-          <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-mono">
+          <span className="text-[15px] bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-mono">
             처음 진입
           </span>
         )}
         {signal.is_first_ever_entry_mp === false && signal.signal_type === 'new_entry_mp' && (
-          <span className="text-[10px] bg-gray-500/10 text-gray-500 border border-gray-500/20 px-2 py-0.5 rounded-full font-mono">
+          <span className="text-[15px] bg-gray-500/10 text-gray-500 border border-gray-500/20 px-2 py-0.5 rounded-full font-mono">
             재진입
           </span>
         )}
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
+        <span className={`text-[15px] font-black px-2 py-0.5 rounded ${
           signal.priority === 'P0' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'
         }`}>
           {signal.priority}
@@ -86,7 +86,7 @@ export default function SignalCard({ signal }: { signal: any }) {
         <div className="flex-1 min-w-0 pr-20">
           {/* 신호 타입 배지 */}
           <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded ${cfg.bg} ${cfg.color} border ${cfg.border} font-mono tracking-widest`}>
+            <span className={`text-[15px] font-black px-2 py-0.5 rounded ${cfg.bg} ${cfg.color} border ${cfg.border} font-mono tracking-widest`}>
               {cfg.label}
             </span>
             {signal.signal_type === 'new_entry_mp' && payload.rank && (
