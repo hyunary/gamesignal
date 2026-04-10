@@ -64,7 +64,7 @@ export default function SignalCard({ signal }: { signal: any }) {
             재진입
           </span>
         )}
-        <span className={`text-[15px] font-black px-2 py-0.5 rounded ${
+        <span className={`text-[15px] font-black font-mono px-2 py-0.5 rounded ${
           signal.priority === 'P0' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'
         }`}>
           {signal.priority}
