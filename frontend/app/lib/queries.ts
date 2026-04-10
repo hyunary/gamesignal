@@ -267,7 +267,7 @@ export async function getForecastBySlug(slug: string): Promise<{ forecast: Forec
   const { rows: threads } = await pool.query(`
     SELECT * FROM forecast_threads
     WHERE forecast_id = $1
-    ORDER BY thread_date ASC, created_at ASC
+    ORDER BY thread_date DESC, created_at DESC
   `, [forecast.id]);
 
   return {
