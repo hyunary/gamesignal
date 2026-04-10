@@ -2,14 +2,14 @@
 
 const SIGNAL_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; glow: string }> = {
   new_entry_mp: {
-    label: 'MP ENTRY',
+    label: 'Most Played Top 100 진입',
     color: 'text-cyan-400',
     bg: 'bg-cyan-500/10',
     border: 'border-cyan-500/30',
     glow: 'shadow-[0_0_20px_rgba(0,212,255,0.1)]',
   },
   new_entry_wl: {
-    label: 'WL ENTRY',
+    label: 'Wish List Top 50 진입',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
@@ -56,12 +56,12 @@ export default function SignalCard({ signal }: { signal: any }) {
       <div className="absolute top-4 right-4 flex items-center gap-2">
         {signal.is_first_ever_entry_mp && (
           <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-mono">
-            FIRST EVER
+            처음 진입
           </span>
         )}
         {signal.is_first_ever_entry_mp === false && signal.signal_type === 'new_entry_mp' && (
           <span className="text-[10px] bg-gray-500/10 text-gray-500 border border-gray-500/20 px-2 py-0.5 rounded-full font-mono">
-            RE-ENTRY
+            재진입
           </span>
         )}
         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
