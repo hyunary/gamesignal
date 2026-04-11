@@ -62,7 +62,7 @@ export default async function ForecastDetailPage({
 
           {/* 예측 범위 바 */}
           <div className="mt-5 pt-5 border-t border-white/[0.05]">
-            <p className="text-[10px] text-gray-600 font-mono uppercase tracking-widest mb-3">Year 1 판매량 예측 범위</p>
+            <p className="text-[10px] text-yellow-500 font-mono uppercase tracking-widest mb-3">Year 1 판매량 예측 범위</p>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Bear', value: forecast.bear_min ? `${forecast.bear_min}만~` : '-', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
