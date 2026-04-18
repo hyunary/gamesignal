@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from './components/Header';
-
-const inter = Inter({ subsets: ['latin'] });
+import ConditionalHeader from './components/ConditionalHeader';
 
 export const metadata: Metadata = {
   title: 'GameSignal — Steam 게임 신호 감지',
@@ -16,9 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className="dark">
-      <body className={`${inter.className} bg-[#070B14] text-gray-100`} style={{ fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif", fontSize: '16px' }}>
-        <Header />
+    <html lang="ko">
+      <body style={{ margin: 0, padding: 0, fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif", fontSize: '16px' }}>
+        <ConditionalHeader>
+          <Header />
+        </ConditionalHeader>
         {children}
       </body>
     </html>

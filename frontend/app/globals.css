@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+Mono:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+Mono:wght@400;700;800&family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -81,4 +81,55 @@ body {
 
 .signal-card-hover:hover {
   transform: translateY(-2px);
+}
+
+/* ============================================================
+   Terminal Design Tokens (Analyst Terminal — Light Mode)
+   ============================================================ */
+
+:root {
+  --bg:         #FAFAF7;
+  --bg-elev:    #FFFFFF;
+  --bg-sunken:  #F2F1EC;
+  --line:       #E6E4DC;
+  --line-strong:#1A1A1A;
+
+  --ink:        #0E0E0E;
+  --ink-2:      #3A3A38;
+  --ink-3:      #6B6B66;
+  --ink-4:      #9C9A93;
+
+  --accent:       #3B5BDB;
+  --accent-soft:  #E8ECFB;
+  --accent-ink:   #1E3A8A;
+
+  --p0:      #C23C3C;
+  --p0-soft: #FBEAEA;
+  --p1:      #C78A00;
+  --p1-soft: #FAF3E0;
+  --p2:      #5C6B82;
+  --p2-soft: #EEF1F5;
+
+  --pos: #1F7A3A;
+  --neg: #B02A37;
+
+  --t-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --t-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --shadow-sm: 0 1px 0 rgba(15,15,15,0.04), 0 1px 2px rgba(15,15,15,0.04);
+  --shadow:    0 1px 0 rgba(15,15,15,0.04), 0 8px 24px -12px rgba(15,15,15,0.08);
+}
+
+@keyframes gspulse {
+  0%   { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Terminal root — scoped so it doesn't leak into dark pages */
+.gs-terminal {
+  font-family: var(--t-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

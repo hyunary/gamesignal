@@ -101,6 +101,37 @@ export async function getPipelineStatus(): Promise<PipelineRun[]> {
   return rows;
 }
 
+export interface SignalHistory {
+  day: string;
+  p0: number;
+  p1: number;
+  p2: number;
+}
+
+export async function getSignalHistory(): Promise<SignalHistory[]> {
+  const { rows } = await pool.query(`
+    SELECT
+      signal_date::text AS day,
+      SUM(CASE WHEN priority = 'P0' THEN 1 ELSE 0 END)::int AS p0,
+      SUM(CASE WHEN priority = 'P1' THEN 1 ELSE 0 END)::int AS p1,
+      SUM(CASE WHEN priority = 'P2' THEN 1 ELSE 0 END)::int AS p2
+    FROM signals
+    WHERE signal_date >= CURRENT_DATE - INTERVAL '6 days'
+    GROUP BY signal_date
+    ORDER BY signal_date ASC
+  `);
+
+  const result: SignalHistory[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() + 9 * 60 * 60 * 1000 - i * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().split('T')[0];
+    const dayLabel = dateStr.slice(5); // MM-DD
+    const found = rows.find((r: any) => r.day === dateStr);
+    result.push({ day: dayLabel, p0: found?.p0 || 0, p1: found?.p1 || 0, p2: found?.p2 || 0 });
+  }
+  return result;
+}
+
 export interface NewsClip {
   id: number;
   clip_date: string;
