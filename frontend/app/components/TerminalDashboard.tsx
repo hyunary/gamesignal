@@ -79,10 +79,17 @@ function getCCU(s: Signal): number {
   return s.concurrent_users ?? s.payload?.concurrent_users ?? 0;
 }
 
-function generateTrend(ccu: number): number[] {
+// Math.random() 사용 금지 — SSR/클라이언트 hydration mismatch 방지
+// app_id 기반 결정론적 seeded PRNG 사용
+function generateTrend(ccu: number, seed: number = 1): number[] {
+  let s = (seed ^ 0x45678abc) >>> 0;
+  const rand = () => {
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
   const pts: number[] = [];
   for (let i = 0; i < 7; i++) {
-    const factor = 0.35 + i * 0.095 + (Math.random() - 0.5) * 0.06;
+    const factor = 0.35 + i * 0.095 + (rand() - 0.5) * 0.06;
     pts.push(Math.round(ccu * Math.min(1, factor)));
   }
   pts[6] = ccu;
@@ -226,7 +233,7 @@ function Pulse({ color = 'var(--pos)' }: { color?: string }) {
 function TerminalRow({ signal, active, onClick }: { signal: Signal; active: boolean; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const ccu = getCCU(signal);
-  const trend = generateTrend(ccu);
+  const trend = generateTrend(ccu, signal.app_id);
 
   return (
     <div
@@ -634,7 +641,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
                 </div>
                 <div>
                   <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 6 }}>7-DAY TREND</div>
-                  <Sparkline data={generateTrend(getCCU(sel))} stroke="var(--accent)" fill="var(--accent-soft)" height={52} strokeWidth={2} />
+                  <Sparkline data={generateTrend(getCCU(sel), sel.app_id)} stroke="var(--accent)" fill="var(--accent-soft)" height={52} strokeWidth={2} />
                 </div>
               </div>
 
