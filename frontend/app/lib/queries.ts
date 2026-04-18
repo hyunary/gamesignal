@@ -314,6 +314,27 @@ export async function getForecastBySlug(slug: string): Promise<{ forecast: Forec
   };
 }
 
+export interface ForecastSuggestion {
+  id: number;
+  suggestion_type: 'new_forecast' | 'update_forecast';
+  game_title: string;
+  reason: string;
+  forecast_id: number | null;
+  status: string;
+  created_at: string;
+}
+
+export async function getForecastSuggestions(): Promise<ForecastSuggestion[]> {
+  const { rows } = await pool.query(`
+    SELECT id, suggestion_type, game_title, reason, forecast_id, status, created_at::text
+    FROM forecast_suggestions
+    WHERE status = 'pending'
+    ORDER BY created_at DESC
+    LIMIT 5
+  `);
+  return rows;
+}
+
 export async function getTopGames() {
   const { rows } = await pool.query(`
     SELECT

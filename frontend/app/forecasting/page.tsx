@@ -1,4 +1,4 @@
-import { getAllForecasts, Forecast } from '../lib/queries';
+import { getAllForecasts, getForecastSuggestions, Forecast, ForecastSuggestion } from '../lib/queries';
 import TerminalShell from '../components/TerminalShell';
 import Link from 'next/link';
 
@@ -10,7 +10,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 export default async function ForecastingPage() {
-  const forecasts = await getAllForecasts().catch(() => []);
+  const [forecasts, suggestions] = await Promise.all([
+    getAllForecasts().catch(() => []),
+    getForecastSuggestions().catch(() => []),
+  ]);
 
   return (
     <TerminalShell activeTab="forecasting">
@@ -35,6 +38,41 @@ export default async function ForecastingPage() {
             YEAR 1 SALES FORECAST
           </span>
         </div>
+
+        {/* ── 오케스트레이터 제안 배너 ────────────────────── */}
+        {suggestions.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{
+              fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+              letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8,
+            }}>
+              ◆ 오케스트레이터 제안
+            </div>
+            {suggestions.map((s: ForecastSuggestion) => (
+              <div key={s.id} style={{
+                background: s.suggestion_type === 'new_forecast' ? 'var(--accent-soft)' : 'var(--p1-soft)',
+                border: `1px solid ${s.suggestion_type === 'new_forecast' ? 'var(--accent)' : 'var(--p1)'}`,
+                borderRadius: 8, padding: '10px 14px', marginBottom: 6,
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <span style={{
+                  fontSize: 11, fontFamily: 'var(--t-mono)',
+                  color: s.suggestion_type === 'new_forecast' ? 'var(--accent-ink)' : 'var(--p1)',
+                  background: 'rgba(0,0,0,0.06)', padding: '2px 7px', borderRadius: 4, flexShrink: 0,
+                }}>
+                  {s.suggestion_type === 'new_forecast' ? '신규 예측' : '업데이트'}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>{s.game_title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>{s.reason}</div>
+                </div>
+                <span style={{ fontSize: 10, fontFamily: 'var(--t-mono)', color: 'var(--ink-4)', flexShrink: 0 }}>
+                  {new Date(s.created_at).toLocaleDateString('ko-KR')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {forecasts.length === 0 ? (
           <div style={{

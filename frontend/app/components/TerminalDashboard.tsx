@@ -3,6 +3,32 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
+// 에러 바운더리
+import React from 'react';
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: string | null }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(e: any) {
+    return { error: String(e?.message || e) };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, fontFamily: 'monospace', color: 'red', background: '#fff', minHeight: '100vh' }}>
+          <h2>Client Error Caught:</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{this.state.error}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Signal {
@@ -374,6 +400,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
   ];
 
   return (
+    <ErrorBoundary>
     <div className="gs-terminal" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Command bar ────────────────────────────────────────────── */}
@@ -777,5 +804,6 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
       </footer>
 
     </div>
+    </ErrorBoundary>
   );
 }
