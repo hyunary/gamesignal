@@ -1,63 +1,85 @@
 import { getNewsByDate, getNewsDateList, NewsClip } from '../lib/queries';
+import TerminalShell from '../components/TerminalShell';
 import Link from 'next/link';
-
 
 export const revalidate = 0;
 
-const IMPORTANCE_CONFIG = {
-  high:   { emoji: '🔴', label: 'High',   color: 'bg-red-900 text-red-300' },
-  medium: { emoji: '🟡', label: 'Medium', color: 'bg-yellow-900 text-yellow-300' },
-  low:    { emoji: '🟢', label: 'Low',    color: 'bg-green-900 text-green-300' },
-};
-
-export default async function NewsPage() {
+export default async function NewsPage({
+  searchParams,
+}: {
+  searchParams?: { date?: string };
+}) {
   const [{ clips, summary }, dates] = await Promise.all([
-    getNewsByDate().catch(() => ({ clips: [], summary: null })),
+    getNewsByDate(searchParams?.date).catch(() => ({ clips: [], summary: null })),
     getNewsDateList().catch(() => []),
   ]);
 
-  const today = new Date(Date.now() + 9 * 60 * 60 * 1000)
-    .toISOString().split('T')[0];
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const displayDate = clips[0]
+    ? (typeof clips[0].clip_date === 'string' ? clips[0].clip_date : today)
+    : today;
 
   const businessClips = clips.filter(c => c.category === 'business');
   const newgameClips  = clips.filter(c => c.category === 'newgame');
 
   return (
-    <main className="min-h-screen bg-[#070B14] text-gray-100 bg-grid">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-xl font-black tracking-tighter uppercase">
-              📰 게임 뉴스 <span className="text-yellow-400">클리핑</span>
-            </h1>
-            <p className="text-xs text-gray-500 uppercase tracking-widest mt-0.5">인벤 · VC/애널리스트 관점 분석</p>
-          </div>
-          <div className="text-right text-xs text-gray-500 font-mono">
-            <p>{today}</p>
-            <p className="text-gray-600">{clips.length}개 뉴스</p>
-          </div>
-        </div>
-      </div>
+    <TerminalShell activeTab="news">
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 24px' }}>
 
-      <div className="max-w-4xl mx-auto px-6 pb-8">
+        {/* ── Panel header ───────────────────────────────── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: 20, paddingBottom: 14, borderBottom: '1px solid var(--line)',
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>News Feed</span>
+          <span style={{
+            fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+            background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 999,
+          }}>
+            {clips.length} clips
+          </span>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+            {displayDate}
+          </span>
+        </div>
+
         {clips.length === 0 ? (
-          <div className="bg-gray-900 rounded-lg p-12 text-center text-gray-600">
-            <p className="text-3xl mb-3">📭</p>
-            <p className="text-xl">오늘 수집된 뉴스가 없습니다</p>
-            <p className="text-base mt-2">Claude Code에서 &ldquo;인벤 뉴스 분석해줘&rdquo;를 실행해주세요</p>
+          <div style={{
+            padding: '56px 24px', textAlign: 'center',
+            background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 8,
+          }}>
+            <div style={{ fontSize: 24, marginBottom: 10 }}>📭</div>
+            <p style={{ fontFamily: 'var(--t-mono)', fontSize: 12, color: 'var(--ink-4)' }}>
+              NO NEWS CLIPS
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 6 }}>
+              Claude Code에서 &ldquo;인벤 뉴스 분석해줘&rdquo;를 실행해주세요
+            </p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
             {/* 핵심 요약 */}
             {summary && (
-              <div className="bg-gray-900 border border-yellow-800 rounded-lg p-5">
-                <h2 className="text-xs font-mono text-yellow-400 uppercase tracking-wider mb-3">
-                  📌 오늘의 핵심 요약
-                </h2>
-                <div className="space-y-1.5">
-                  {summary.summary.split('\n').map((line, i) => (
-                    <p key={i} className="text-gray-300 text-base leading-relaxed">{line}</p>
+              <div style={{
+                background: 'var(--bg-elev)',
+                border: '1px solid var(--line)',
+                borderLeft: '3px solid var(--accent)',
+                borderRadius: '0 8px 8px 0',
+                padding: '14px 18px',
+              }}>
+                <div style={{
+                  fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--accent)',
+                  letterSpacing: '.1em', marginBottom: 10,
+                }}>
+                  TODAY&apos;S SUMMARY
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {summary.summary.split('\n').filter(Boolean).map((line, i) => (
+                    <p key={i} style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65 }}>
+                      {line}
+                    </p>
                   ))}
                 </div>
               </div>
@@ -66,13 +88,17 @@ export default async function NewsPage() {
             {/* 업계·비즈니스 */}
             {businessClips.length > 0 && (
               <section>
-                <h2 className="text-sm font-mono text-gray-400 uppercase tracking-wider mb-4">
-                  🏢 업계·비즈니스
-                </h2>
-                <div className="space-y-4">
-                  {businessClips.map(clip => (
-                    <NewsCard key={clip.id} clip={clip} />
-                  ))}
+                <div style={{
+                  fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+                  letterSpacing: '.1em', textTransform: 'uppercase',
+                  marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--line)',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span>Business</span>
+                  <span style={{ color: 'var(--ink-4)' }}>{businessClips.length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {businessClips.map(clip => <NewsCard key={clip.id} clip={clip} />)}
                 </div>
               </section>
             )}
@@ -80,80 +106,125 @@ export default async function NewsPage() {
             {/* 신작·서비스 */}
             {newgameClips.length > 0 && (
               <section>
-                <h2 className="text-sm font-mono text-gray-400 uppercase tracking-wider mb-4">
-                  🎮 신작·서비스
-                </h2>
-                <div className="space-y-4">
-                  {newgameClips.map(clip => (
-                    <NewsCard key={clip.id} clip={clip} />
-                  ))}
+                <div style={{
+                  fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+                  letterSpacing: '.1em', textTransform: 'uppercase',
+                  marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--line)',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span>New Games</span>
+                  <span style={{ color: 'var(--ink-4)' }}>{newgameClips.length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {newgameClips.map(clip => <NewsCard key={clip.id} clip={clip} />)}
                 </div>
               </section>
             )}
 
-            {/* 날짜 히스토리 */}
+            {/* 날짜 아카이브 */}
             {dates.length > 1 && (
               <section>
-                <h2 className="text-sm font-mono text-gray-400 uppercase tracking-wider mb-3">
-                  📅 이전 클리핑
-                </h2>
-                <div className="flex flex-wrap gap-2">
+                <div style={{
+                  fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+                  letterSpacing: '.1em', textTransform: 'uppercase',
+                  marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--line)',
+                }}>
+                  Archive
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {dates.slice(1).map(date => (
-                    <Link
-                      key={date}
-                      href={`/news?date=${date}`}
-                      className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 px-3 py-1.5 rounded font-mono transition-colors"
-                    >
+                    <Link key={date} href={`/news?date=${date}`} style={{
+                      fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-3)',
+                      padding: '4px 10px', border: '1px solid var(--line)', borderRadius: 4,
+                      textDecoration: 'none', background: 'var(--bg-elev)',
+                      transition: 'border-color .15s',
+                    }}>
                       {date}
                     </Link>
                   ))}
                 </div>
               </section>
             )}
+
           </div>
         )}
       </div>
-    </main>
+    </TerminalShell>
   );
 }
 
+// ─── News Card ──────────────────────────────────────────────────────────────
+
 function NewsCard({ clip }: { clip: NewsClip }) {
-  const cfg = IMPORTANCE_CONFIG[clip.importance as keyof typeof IMPORTANCE_CONFIG]
-    || IMPORTANCE_CONFIG.medium;
+  const cfgMap: Record<string, { label: string; color: string; bg: string }> = {
+    high:   { label: 'HIGH', color: 'var(--p0)', bg: 'var(--p0-soft)' },
+    medium: { label: 'MED',  color: 'var(--p1)', bg: 'var(--p1-soft)' },
+    low:    { label: 'LOW',  color: 'var(--p2)', bg: 'var(--p2-soft)' },
+  };
+  const cfg = cfgMap[clip.importance] || cfgMap.medium;
 
   return (
-    <div className="bg-gray-900 rounded-lg p-5 border border-gray-800 hover:border-gray-700 transition-colors">
-      <div className="flex items-start gap-3 mb-3">
-        <span className={`text-xs px-2 py-0.5 rounded font-mono flex-shrink-0 ${cfg.color}`}>
-          {cfg.emoji} {cfg.label}
+    <div style={{
+      background: 'var(--bg-elev)', border: '1px solid var(--line)',
+      borderRadius: 8, padding: '14px 16px',
+    }}>
+      {/* Badges */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+        <span style={{
+          fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 600, letterSpacing: '.08em',
+          background: cfg.bg, color: cfg.color, padding: '3px 7px', borderRadius: 999,
+        }}>
+          {cfg.label}
         </span>
         {clip.related_ticker && (
-          <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded font-mono flex-shrink-0">
+          <span style={{
+            fontFamily: 'var(--t-mono)', fontSize: 10,
+            background: 'var(--accent-soft)', color: 'var(--accent-ink)',
+            padding: '3px 7px', borderRadius: 999,
+          }}>
             📊 {clip.related_company} · {clip.related_ticker}
           </span>
         )}
       </div>
 
-      <h3 className="text-white font-semibold mb-2 leading-snug">{clip.title}</h3>
+      {/* Title */}
+      <h3 style={{
+        fontSize: 14, fontWeight: 600, color: 'var(--ink)',
+        marginBottom: 6, lineHeight: 1.45,
+      }}>
+        {clip.title}
+      </h3>
 
-      <p className="text-gray-400 text-base mb-3 leading-relaxed">{clip.summary}</p>
+      {/* Summary */}
+      <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.65 }}>
+        {clip.summary}
+      </p>
 
+      {/* Analyst comment */}
       {clip.analyst_comment && (
-        <div className="bg-gray-800 rounded p-3 border-l-2 border-yellow-600">
-          <p className="text-yellow-200 text-sm leading-relaxed">
-            💡 <span className="italic">{clip.analyst_comment}</span>
+        <div style={{
+          background: 'var(--bg-sunken)',
+          borderLeft: '2px solid var(--p1)',
+          borderRadius: '0 4px 4px 0',
+          padding: '8px 12px', marginTop: 10,
+        }}>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.65, fontStyle: 'italic' }}>
+            💡 {clip.analyst_comment}
           </p>
         </div>
       )}
 
+      {/* Source link */}
       {clip.source_url && (
-        <div className="mt-3">
+        <div style={{ marginTop: 10 }}>
           <a
             href={clip.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-gray-600 hover:text-gray-400 transition-colors"
-          >
+            style={{
+              fontFamily: 'var(--t-mono)', fontSize: 11,
+              color: 'var(--ink-4)', textDecoration: 'none',
+            }}>
             원문 보기 →
           </a>
         </div>

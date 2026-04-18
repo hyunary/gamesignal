@@ -133,3 +133,20 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* 공용 카드 — hover 효과 (Server Component에서 event handler 없이 사용) */
+.gs-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: border-color .15s, background .15s;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.gs-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
