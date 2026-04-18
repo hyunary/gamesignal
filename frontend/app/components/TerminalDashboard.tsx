@@ -110,9 +110,16 @@ const signed = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
 
 function CountUp({ value, duration = 900, suffix = '' }: { value: number; duration?: number; suffix?: string }) {
   const [v, setV] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const startRef = useRef<number | null>(null);
   const fromRef = useRef(0);
+
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     const from = fromRef.current;
     startRef.current = null;
     let raf: number;
@@ -126,7 +133,9 @@ function CountUp({ value, duration = 900, suffix = '' }: { value: number; durati
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration, mounted]);
+
+  if (!mounted) return <>{fmt(value)}{suffix}</>;
   return <>{fmt(v)}{suffix}</>;
 }
 
@@ -220,9 +229,13 @@ function Delta({ value, size = 12 }: { value: number; size?: number }) {
 }
 
 function Pulse({ color = 'var(--pos)' }: { color?: string }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   return (
     <span style={{ position: 'relative', width: 8, height: 8, display: 'inline-block', flexShrink: 0 }}>
-      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: color, animation: 'gspulse 1.8s ease-out infinite' }} />
+      {mounted && (
+        <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: color, animation: 'gspulse 1.8s ease-out infinite' }} />
+      )}
       <span style={{ position: 'absolute', inset: 2, borderRadius: '50%', background: color }} />
     </span>
   );
