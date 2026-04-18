@@ -40,8 +40,8 @@ export interface PipelineRun {
 export async function getTodaySignals(): Promise<Signal[]> {
   const { rows } = await pool.query(`
     SELECT
-      s.signal_id, s.signal_date, s.signal_type, s.priority,
-      s.payload, s.notified_at,
+      s.signal_id, s.signal_date::text AS signal_date, s.signal_type, s.priority,
+      s.payload, s.notified_at::text AS notified_at,
       g.app_id, g.title, g.genres, g.header_image_url,
       snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank,
       ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed,
@@ -70,8 +70,8 @@ export async function getTodaySignals(): Promise<Signal[]> {
 export async function getRecentSignals(): Promise<Signal[]> {
   const { rows } = await pool.query(`
     SELECT
-      s.signal_id, s.signal_date, s.signal_type, s.priority,
-      s.payload, s.notified_at,
+      s.signal_id, s.signal_date::text AS signal_date, s.signal_type, s.priority,
+      s.payload, s.notified_at::text AS notified_at,
       g.app_id, g.title, g.genres, g.header_image_url,
       snap.most_played_rank, snap.concurrent_users, snap.wishlist_rank,
       ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed
@@ -98,7 +98,10 @@ export async function getPipelineStatus(): Promise<PipelineRun[]> {
     ORDER BY run_date DESC, started_at DESC
     LIMIT 20
   `);
-  return rows;
+  return rows.map((r: any) => ({
+    ...r,
+    run_date: r.run_date instanceof Date ? r.run_date.toISOString().split('T')[0] : String(r.run_date ?? ''),
+  }));
 }
 
 export interface SignalHistory {
