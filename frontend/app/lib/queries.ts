@@ -154,33 +154,22 @@ export interface NewsSummary {
 }
 
 export async function getNewsByDate(date?: string): Promise<{ clips: NewsClip[]; summary: NewsSummary | null }> {
-  // KST 기준 오늘 날짜 계산 (UTC+9)
-  const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000)
-    .toISOString().split('T')[0];
-
-  // 오늘 날짜 지정 or 명시적 date 파라미터
-  const targetDate = date || kstDate;
-
-  // 해당 날짜에 데이터가 없으면 가장 최근 날짜로 fallback
-  const { rows: dateCheck } = await pool.query(`
-    SELECT clip_date::text FROM news_clips
-    WHERE clip_date = $1
-    LIMIT 1
-  `, [targetDate]);
-
   let dateParam: string;
-  if (dateCheck.length > 0) {
-    dateParam = targetDate;
+
+  if (date) {
+    // 명시적 date 파라미터가 있으면 그대로 사용 (아카이브 탐색)
+    dateParam = date;
   } else {
-    // 가장 최근 날짜 조회
+    // 파라미터 없으면 항상 가장 최근 날짜 표시
+    // (미리 입력된 내일 날짜도 즉시 반영)
     const { rows: latestDate } = await pool.query(`
       SELECT clip_date::text FROM news_clips
       ORDER BY clip_date DESC
       LIMIT 1
     `);
-    dateParam = latestDate.length > 0
-      ? latestDate[0].clip_date
-      : targetDate;
+    const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000)
+      .toISOString().split('T')[0];
+    dateParam = latestDate.length > 0 ? latestDate[0].clip_date : kstDate;
   }
 
   const orderClause = `
