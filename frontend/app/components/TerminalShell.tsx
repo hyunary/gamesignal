@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getPipelineStatus } from '../lib/queries';
 
 const TABS = [
-  { key: 'signals',     label: 'Signals',     href: '/' },
+  { key: 'signals',     label: 'Signals',     href: '/dashboard' },
   { key: 'news',        label: 'News',        href: '/news' },
   { key: 'forecasting', label: 'Forecasting', href: '/forecasting' },
   { key: 'watchlist',   label: 'Watchlist',   href: '#', disabled: true },
