@@ -7,6 +7,7 @@ const TABS = [
   { key: 'forecasting', label: 'Forecasting', href: '/forecasting' },
   { key: 'watchlist',   label: 'Watchlist',   href: '#', disabled: true },
   { key: 'publishers',  label: 'Publishers',  href: '#', disabled: true },
+  { key: 'about',       label: 'About',       href: '/about' },
 ];
 
 export default async function TerminalShell({
@@ -140,12 +141,6 @@ export default async function TerminalShell({
         <span style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)' }}>
           LAST UPDATE {timestamp}
         </span>
-        <Link href="/about" style={{
-          fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-4)',
-          textDecoration: 'none', letterSpacing: '.08em',
-        }}>
-          ABOUT
-        </Link>
         <span style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-4)' }}>v4.2.1</span>
       </footer>
 
