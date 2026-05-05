@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 const SIGNAL_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; glow: string }> = {
   new_entry_mp: {
     label: 'Most Played Top 100 진입',
@@ -75,9 +77,11 @@ export default function SignalCard({ signal }: { signal: any }) {
         {/* 게임 이미지 */}
         {signal.header_image_url && (
           <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-white/10">
-            <img
+            <Image
               src={signal.header_image_url}
               alt={signal.title}
+              width={64}
+              height={64}
               className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
             />
           </div>
