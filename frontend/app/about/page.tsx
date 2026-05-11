@@ -1,6 +1,8 @@
 import { getAboutStats } from '../lib/queries';
 import TerminalShell from '../components/TerminalShell';
 import Link from 'next/link';
+import MadeBySection from '../components/sections/MadeBySection';
+import MadeBySection from '../components/sections/MadeBySection';
 
 export const revalidate = 0;
 
@@ -186,6 +188,10 @@ export default async function AboutPage() {
           </div>
         </section>
 
+        <MadeBySection />
+
+        <MadeBySection />
+
         {/* ── CTA ─────────────────────────────────────────────────── */}
         <section style={{
           padding: '56px 48px',
@@ -229,7 +235,7 @@ export default async function AboutPage() {
               fontFamily: 'var(--t-mono)', fontSize: 12, marginTop: 12,
             }}>
               {([
-                { k: 'VERSION',         v: 'GameSignal MVP v1.0' },
+                { k: 'VERSION',         v: 'NoiseCatcher MVP v1.0' },
                 { k: 'FRAMEWORK',       v: 'Next.js 14 + Tailwind CSS' },
                 { k: 'FORECAST_MODEL',  v: 'Game Sales Predictor v1.1' },
                 { k: 'LAST_CLIP_DATE',  v: stats.last_clip_date ?? '—' },
