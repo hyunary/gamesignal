@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: 'NoiseCatcher',
     images: [
       {
-        url: 'https://noisecatcher.ai/og-image.png',
+        url: 'https://www.noisecatcher.ai/og-image.png',
         width: 1200,
         height: 630,
         alt: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
     description: '게임이 뜨기 전에 신호가 옵니다. AI가 노이즈 속에서 진짜를 건집니다.',
-    images: ['https://noisecatcher.ai/og-image.png'],
+    images: ['https://www.noisecatcher.ai/og-image.png'],
   },
 };
 
