@@ -1,7 +1,20 @@
 import type { Metadata } from 'next';
+import { Inter_Tight, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
-import Header from './components/Header';
-import ConditionalHeader from './components/ConditionalHeader';
+
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'GameSignal — Steam 게임 신호 감지',
@@ -14,11 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
-      <body style={{ margin: 0, padding: 0, fontFamily: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif", fontSize: '16px' }}>
-        <ConditionalHeader>
-          <Header />
-        </ConditionalHeader>
+    <html lang="ko" className={`${interTight.variable} ${ibmPlexMono.variable}`}>
+      <body>
         {children}
       </body>
     </html>

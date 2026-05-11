@@ -1,92 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+Mono:wght@400;700;800&family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #030712;
-  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  font-size: 16px;
-}
-
-/* 숫자/코드 데이터 전용 */
-.font-mono {
-  font-family: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace !important;
-}
-
-/* Tailwind font-mono 오버라이드 */
-.font-mono, [class*="font-mono"] {
-  font-family: 'Noto Sans Mono', 'Consolas', 'Courier New', monospace !important;
-}
-
-/* 폰트 크기 상향 보정 */
-.text-xs { font-size: 0.8rem !important; }
-.text-sm { font-size: 0.95rem !important; }
-.text-base { font-size: 1.05rem !important; }
-.text-lg { font-size: 1.2rem !important; }
-.text-xl { font-size: 1.4rem !important; }
-.text-2xl { font-size: 1.7rem !important; }
-.text-3xl { font-size: 2rem !important; }
-.text-4xl { font-size: 2.4rem !important; }
-
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 30s linear infinite;
-}
-
 /* ============================================================
-   배경 그리드 패턴 + 광원 효과
+   Design Tokens — Editorial Light
    ============================================================ */
-
-.bg-grid {
-  background-image:
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.glow-cyan {
-  position: fixed;
-  top: -20%;
-  left: -10%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(0, 212, 255, 0.06) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.glow-purple {
-  position: fixed;
-  bottom: -20%;
-  right: -10%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ============================================================
-   카드 hover 효과
-   ============================================================ */
-
-.signal-card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.signal-card-hover:hover {
-  transform: translateY(-2px);
-}
-
-/* ============================================================
-   Terminal Design Tokens (Analyst Terminal — Light Mode)
-   ============================================================ */
-
 :root {
   --bg:         #FAFAF7;
   --bg-elev:    #FFFFFF;
@@ -113,40 +31,106 @@ body {
   --pos: #1F7A3A;
   --neg: #B02A37;
 
-  --t-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  --t-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --t-sans: var(--font-sans, 'Inter Tight'), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --t-mono: var(--font-mono, 'IBM Plex Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --r-sm: 6px;
+  --r:    10px;
+  --r-lg: 14px;
 
   --shadow-sm: 0 1px 0 rgba(15,15,15,0.04), 0 1px 2px rgba(15,15,15,0.04);
   --shadow:    0 1px 0 rgba(15,15,15,0.04), 0 8px 24px -12px rgba(15,15,15,0.08);
 }
 
+/* ============================================================
+   Base Reset
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--t-sans);
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01","cv11","tnum";
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+
+/* ============================================================
+   Typography Utilities
+   ============================================================ */
+.gs-eyebrow {
+  font-family: var(--t-mono);
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  letter-spacing: .18em; margin-bottom: 14px;
+  text-transform: uppercase; display: block;
+}
+.gs-h1 {
+  font-size: 56px; line-height: 1.0; letter-spacing: -0.035em;
+  font-weight: 500; margin: 0 0 16px;
+}
+.gs-deck {
+  font-size: 17px; line-height: 1.5; color: var(--ink-2);
+  max-width: 680px; margin: 0;
+}
+.gs-section-label {
+  font-family: var(--t-mono);
+  font-size: 10.5px; font-weight: 600; color: var(--accent);
+  letter-spacing: .16em; margin-bottom: 10px;
+  text-transform: uppercase; display: block;
+}
+.gs-page {
+  max-width: 1320px; margin: 0 auto; padding: 40px 40px 80px;
+}
+.gs-rule        { height: 1px; background: var(--line); border: 0; margin: 0; }
+.gs-heavy-rule  { height: 1px; background: var(--ink);  border: 0; margin: 0; }
+
+/* Tabular numerics */
+.tab { font-variant-numeric: tabular-nums; }
+
+/* Bullet marker (fc-bullet) */
+.fc-bullet::before {
+  content: "";
+  position: absolute; left: 0; top: 8px;
+  width: 5px; height: 5px;
+  border-radius: 50%; background: var(--ink-4);
+}
+
+/* ============================================================
+   Pulse animation
+   ============================================================ */
 @keyframes gspulse {
   0%   { transform: scale(0.6); opacity: 0.8; }
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Terminal root — scoped so it doesn't leak into dark pages */
-.gs-terminal {
-  font-family: var(--t-sans);
-  background: var(--bg);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-/* 공용 카드 — hover 효과 (Server Component에서 event handler 없이 사용) */
+/* ============================================================
+   Card hover utility (CSS-only, usable in Server Components)
+   ============================================================ */
 .gs-card {
   background: var(--bg-elev);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 14px 16px;
-  transition: border-color .15s, background .15s;
+  border-radius: var(--r);
+  transition: border-color .15s, box-shadow .15s, transform .15s;
   display: block;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
 }
 .gs-card:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+body::-webkit-scrollbar { width: 10px; }
+body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }

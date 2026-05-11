@@ -26,7 +26,7 @@ export default async function ForecastDetailPage({
 
   return (
     <TerminalShell activeTab="forecasting">
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 24px' }}>
 
         {/* ── Back link ──────────────────────────────────── */}
         <Link href="/forecasting" style={{

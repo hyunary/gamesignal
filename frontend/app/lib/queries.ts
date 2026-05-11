@@ -25,6 +25,7 @@ export interface Signal {
   video_title: string | null;
   comments_total: number | null;
   is_first_ever_entry_mp: boolean | null;
+  last_entry_date: string | null;
 }
 
 export interface PipelineRun {
@@ -47,17 +48,26 @@ export async function getTodaySignals(): Promise<Signal[]> {
       ps.company_name, ps.stock_ticker, ps.exchange, ps.is_listed,
       yt.positive_pct, yt.neutral_pct, yt.negative_pct,
       yt.video_url, yt.video_title, yt.comments_total,
-      snap.is_first_ever_entry_mp
+      snap.is_first_ever_entry_mp,
+      (
+        SELECT MAX(prev.signal_date)::text
+        FROM signals prev
+        WHERE prev.app_id = s.app_id
+          AND prev.signal_type = 'new_entry_mp'
+          AND prev.signal_date < s.signal_date
+      ) AS last_entry_date
     FROM signals s
     JOIN games g USING(app_id)
     LEFT JOIN game_snapshots snap
       ON snap.app_id = s.app_id AND snap.snapshot_date = s.signal_date
-    LEFT JOIN publisher_stocks ps
-      ON ps.developer_name = g.developer
-      OR ps.developer_name = g.publisher
+    LEFT JOIN LATERAL (
+      SELECT * FROM publisher_stocks
+      WHERE developer_name = g.publisher OR developer_name = g.developer
+      LIMIT 1
+    ) ps ON true
     LEFT JOIN youtube_sentiment yt
       ON yt.app_id = s.app_id AND yt.analysis_date = s.signal_date
-    WHERE s.signal_date = CURRENT_DATE
+    WHERE s.signal_date = (NOW() AT TIME ZONE 'Asia/Seoul')::date
       AND s.signal_type != 'composite'
     ORDER BY
       CASE s.priority WHEN 'P0' THEN 0 ELSE 1 END,
@@ -79,10 +89,12 @@ export async function getRecentSignals(): Promise<Signal[]> {
     JOIN games g USING(app_id)
     LEFT JOIN game_snapshots snap
       ON snap.app_id = s.app_id AND snap.snapshot_date = s.signal_date
-    LEFT JOIN publisher_stocks ps
-      ON ps.developer_name = g.developer
-      OR ps.developer_name = g.publisher
-    WHERE s.signal_date >= CURRENT_DATE - 7
+    LEFT JOIN LATERAL (
+      SELECT * FROM publisher_stocks
+      WHERE developer_name = g.publisher OR developer_name = g.developer
+      LIMIT 1
+    ) ps ON true
+    WHERE s.signal_date >= (NOW() AT TIME ZONE 'Asia/Seoul')::date - 7
       AND s.signal_type != 'composite'
     ORDER BY s.signal_date DESC,
       CASE s.priority WHEN 'P0' THEN 0 ELSE 1 END,
@@ -119,7 +131,7 @@ export async function getSignalHistory(): Promise<SignalHistory[]> {
       SUM(CASE WHEN priority = 'P1' THEN 1 ELSE 0 END)::int AS p1,
       SUM(CASE WHEN priority = 'P2' THEN 1 ELSE 0 END)::int AS p2
     FROM signals
-    WHERE signal_date >= CURRENT_DATE - INTERVAL '6 days'
+    WHERE signal_date >= (NOW() AT TIME ZONE 'Asia/Seoul')::date - INTERVAL '6 days'
     GROUP BY signal_date
     ORDER BY signal_date ASC
   `);
@@ -324,6 +336,30 @@ export async function getForecastSuggestions(): Promise<ForecastSuggestion[]> {
   return rows;
 }
 
+export interface AboutStats {
+  total_clips: number;
+  total_days: number;
+  total_forecasts: number;
+  total_threads: number;
+  pending_suggestions: number;
+  last_clip_date: string | null;
+  upcoming_schedules: number;
+}
+
+export async function getAboutStats(): Promise<AboutStats> {
+  const { rows } = await pool.query(`
+    SELECT
+      (SELECT COUNT(*)::int FROM news_clips) AS total_clips,
+      (SELECT COUNT(DISTINCT clip_date)::int FROM news_clips) AS total_days,
+      (SELECT COUNT(*)::int FROM forecasts) AS total_forecasts,
+      (SELECT COUNT(*)::int FROM forecast_threads) AS total_threads,
+      (SELECT COUNT(*)::int FROM forecast_suggestions WHERE status = 'pending') AS pending_suggestions,
+      (SELECT MAX(clip_date)::text FROM news_clips) AS last_clip_date,
+      (SELECT COUNT(*)::int FROM forecast_schedule WHERE due_date >= CURRENT_DATE) AS upcoming_schedules
+  `);
+  return rows[0];
+}
+
 export async function getTopGames() {
   const { rows } = await pool.query(`
     SELECT
@@ -333,7 +369,7 @@ export async function getTopGames() {
       s.wishlist_rank
     FROM game_snapshots s
     JOIN games g USING(app_id)
-    WHERE s.snapshot_date = CURRENT_DATE
+    WHERE s.snapshot_date = (NOW() AT TIME ZONE 'Asia/Seoul')::date
       AND s.most_played_rank IS NOT NULL
     ORDER BY s.most_played_rank
     LIMIT 20

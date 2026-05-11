@@ -1,5 +1,6 @@
 import { getTodaySignals, getRecentSignals, getPipelineStatus, getTopGames, getSignalHistory } from '../lib/queries';
 import TerminalDashboard from '../components/TerminalDashboard';
+import TerminalShell from '../components/TerminalShell';
 
 export const revalidate = 0;
 
@@ -19,18 +20,19 @@ export default async function Home() {
   const timestamp = kstNow.toISOString().replace('T', ' ').slice(0, 16) + ' KST';
 
   const successCount = pipelineStatus.filter((p: any) => p.status === 'success').length;
-  const totalCount = pipelineStatus.length;
-  const pipeline = `${successCount}/${totalCount}`;
+  const pipeline = `${successCount}/${pipelineStatus.length}`;
 
   return (
-    <TerminalDashboard
-      signals={allSignals}
-      topGames={topGames}
-      pipelineStatus={pipelineStatus}
-      signalHistory={signalHistory}
-      timestamp={timestamp}
-      pipeline={pipeline}
-      isToday={isToday}
-    />
+    <TerminalShell activeTab="dashboard">
+      <TerminalDashboard
+        signals={allSignals}
+        topGames={topGames}
+        pipelineStatus={pipelineStatus}
+        signalHistory={signalHistory}
+        timestamp={timestamp}
+        pipeline={pipeline}
+        isToday={isToday}
+      />
+    </TerminalShell>
   );
 }
