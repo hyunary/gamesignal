@@ -17,8 +17,30 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GameSignal — Steam 게임 신호 감지',
-  description: 'Steam 게임 트래픽 데이터 기반 신호 감지 서비스',
+  title: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
+  description: '게임이 뜨기 전에 신호가 옵니다. AI가 노이즈 속에서 진짜를 건집니다.',
+  openGraph: {
+    title: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
+    description: '게임이 뜨기 전에 신호가 옵니다. AI가 노이즈 속에서 진짜를 건집니다.',
+    url: 'https://noisecatcher.ai',
+    siteName: 'NoiseCatcher',
+    images: [
+      {
+        url: 'https://noisecatcher.ai/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
+      },
+    ],
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NoiseCatcher — 게임 트래픽 신호를 먼저 잡다',
+    description: '게임이 뜨기 전에 신호가 옵니다. AI가 노이즈 속에서 진짜를 건집니다.',
+    images: ['https://noisecatcher.ai/og-image.png'],
+  },
 };
 
 export default function RootLayout({
