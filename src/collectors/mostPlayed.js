@@ -36,7 +36,7 @@ async function scrapeMostPlayed() {
   try {
     console.log('📡 Steam 차트 페이지 접속 중...');
     await page.goto('https://store.steampowered.com/charts/mostplayed', {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: 30000
     });
     // CAPTCHA / 차단 감지
@@ -44,10 +44,11 @@ async function scrapeMostPlayed() {
     if (pageTitle.includes('Please verify') || pageTitle.includes('Access Denied')) {
       throw Object.assign(new Error('Steam IP 차단 감지'), { response: { status: 429 } });
     }
+    await page.waitForTimeout(3000);
     console.log('🔍 페이지 파싱 중...');
 
     // 테이블 로딩 대기 (TR 행이 나타날 때까지)
-    await page.waitForSelector('tr a[href*="/app/"]', { timeout: 15000 })
+    await page.waitForSelector('tr a[href*="/app/"]', { timeout: 30000 })
       .catch(() => console.log('⚠️ 테이블 로딩 대기 실패, 파싱 계속 시도...'));
 
     // 게임 목록 추출
