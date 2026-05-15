@@ -40,7 +40,7 @@ export default function TerminalShell({
               background: 'var(--accent)', flexShrink: 0, display: 'inline-block',
             }} />
             <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
-              GameSignal
+              NoiseCatcher
             </span>
           </Link>
 
