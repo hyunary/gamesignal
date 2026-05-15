@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Noise Catcher symbol">
+  <g transform="translate(2.5 4)">
+    <path d="M95 22A40 40 0 1 0 95 98" stroke="#FAFAF7" stroke-width="20" stroke-linecap="round" fill="none"></path>
+    <circle cx="102" cy="60" r="11" fill="#3B5BDB"></circle>
+  </g>
+</svg>

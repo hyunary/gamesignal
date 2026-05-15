@@ -1,0 +1,46 @@
+/* Noise Catcher — Brand Tokens
+ * Drop these custom properties anywhere you need to reference the brand.
+ * Pair with Inter Tight (body), Instrument Serif (display), IBM Plex Mono (data).
+ */
+
+:root {
+  /* Canvas */
+  --nc-bg:        #FAFAF7;   /* primary canvas — warm off-white */
+  --nc-bg-elev:   #FFFFFF;   /* elevated surfaces */
+  --nc-bg-sunken: #F2F1EC;   /* sunken sections, sidebars */
+
+  /* Ink scale */
+  --nc-ink:    #0E0E0E;      /* primary text & marks */
+  --nc-ink-2:  #3A3A38;      /* body copy */
+  --nc-ink-3:  #6B6B66;      /* labels, secondary text */
+  --nc-ink-4:  #9C9A93;      /* muted, tertiary */
+
+  /* Lines */
+  --nc-line:        #E6E4DC; /* hairlines, borders */
+  --nc-line-strong: #1A1A1A;
+
+  /* Brand accent — the caught signal */
+  --nc-accent:      #3B5BDB;
+  --nc-accent-soft: #E8ECFB;
+  --nc-accent-ink:  #1E3A8A;
+
+  /* Status (optional, for product UI) */
+  --nc-pos: #1F7A3A;
+  --nc-neg: #B02A37;
+
+  /* Type stacks */
+  --nc-serif: "Instrument Serif", "Times New Roman", Georgia, serif;          /* wordmark, display */
+  --nc-sans:  "Inter Tight", -apple-system, "Helvetica Neue", Arial, sans-serif; /* UI body */
+  --nc-mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;   /* data, micro-labels */
+}
+
+/* Wordmark — apply to any element holding "Noise Catcher" */
+.nc-wordmark {
+  font-family: var(--nc-serif);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  color: var(--nc-ink);
+  white-space: nowrap;
+}
+.nc-wordmark--inverse { color: var(--nc-bg); }

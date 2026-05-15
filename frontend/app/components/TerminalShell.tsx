@@ -1,3 +1,4 @@
+import { NCLockup, NCSymbol } from '@/app/components/brand/NoiseCatcherLogo';
 import Link from 'next/link';
 
 const NAV_ITEMS = [
@@ -34,13 +35,12 @@ export default function TerminalShell({
         }}>
 
           {/* Brand */}
-          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <span style={{
-              width: 12, height: 12, borderRadius: '50%',
-              background: 'var(--accent)', flexShrink: 0, display: 'inline-block',
-            }} />
-            <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
-              NoiseCatcher
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <span className="hidden sm:inline">
+              <NCLockup layout="horizontal" size={28} />
+            </span>
+            <span className="sm:hidden">
+              <NCSymbol size={24} />
             </span>
           </Link>
 
