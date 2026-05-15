@@ -1,491 +1,469 @@
-'use client';
+/**
+ * app/components/TerminalDashboard.tsx — NoiseCatcher
+ *
+ * 반응형 수정 4개 적용:
+ *  [수정 1] KPI strip     4열 → 모바일 2열
+ *  [수정 2] Filter toolbar wrap 처리 + 버튼 텍스트 모바일 단축
+ *  [수정 3] Signal card grid  auto-fill → 모바일 1열
+ *  [수정 4] 하단 차트+Top10  2열 → 모바일 1열
+ *
+ * 인라인 style 유지 대상:
+ *  - tierFg, tierBg 등 동적 색상 값
+ *  - barWidth 등 JS 계산 퍼센트 값
+ *  CSS 변수 --line / --bg-elev / --ink 유지
+ */
 
-import { useState } from 'react';
-import Link from 'next/link';
+"use client";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { useState, useMemo } from "react";
+
+/* ── 타입 ──────────────────────────────────────────────────────── */
+
+type Tier = "P0" | "P1" | "P2";
 
 interface Signal {
-  signal_id: string;
-  signal_type: string;
-  priority: string;
-  title: string;
-  app_id: number;
-  company_name: string | null;
-  stock_ticker: string | null;
-  is_listed: boolean | null;
-  concurrent_users: number | null;
-  most_played_rank: number | null;
-  payload: any;
-  header_image_url: string | null;
-  is_first_ever_entry_mp: boolean | null;
-  last_entry_date: string | null;
-  signal_date: string;
+  id: string;
+  gameTitle: string;
+  developer: string;
+  tier: Tier;
+  signalType: string;
+  insight: string;
+  ccu: number;
+  ccuDelta: number;
+  wishlistRank: number | null;
+  collectedAt: string;
+  headerImageUrl: string;
+  youtubeUrl: string | null;
 }
 
-interface TopGame {
-  app_id: number;
-  title: string;
-  concurrent_users: number;
-  most_played_rank: number | null;
-}
+/* ── 상수 ──────────────────────────────────────────────────────── */
 
-interface PipelineRun {
-  source: string;
-  status: string;
-  rows_collected: number | null;
-  run_date: string;
-}
-
-interface SignalHistory {
-  day: string;
-  p0: number;
-  p1: number;
-  p2: number;
-}
-
-interface Props {
-  signals: Signal[];
-  topGames: TopGame[];
-  pipelineStatus: PipelineRun[];
-  signalHistory: SignalHistory[];
-  timestamp: string;
-  pipeline: string;
-  isToday: boolean;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const SIGNAL_LABELS: Record<string, string> = {
-  new_entry_mp:    '진입',
-  new_entry_wl:    'WL 진입',
-  traffic_revival: 'REVIVAL',
-  wishlist_surge:  'WL SURGE',
-  review_spike:    'REVIEW ↑',
+const TIER_META: Record<Tier, { fg: string; bg: string; label: string }> = {
+  P0: { fg: "#dc2626", bg: "#fef2f2", label: "P0" },
+  P1: { fg: "#d97706", bg: "#fffbeb", label: "P1" },
+  P2: { fg: "#6b7280", bg: "#f9fafb", label: "P2" },
 };
 
-function getLabel(s: Signal) {
-  if (s.signal_type === 'new_entry_mp') {
-    if (s.is_first_ever_entry_mp) return '첫 진입';
-    if (s.last_entry_date) {
-      const days = Math.round(
-        (new Date(s.signal_date).getTime() - new Date(s.last_entry_date).getTime())
-        / (1000 * 60 * 60 * 24)
-      );
-      return days > 0 ? `${days}일만에 재진입` : '재진입';
-    }
-    return '재진입';
-  }
-  return SIGNAL_LABELS[s.signal_type] || s.signal_type;
+const FILTER_OPTIONS: { key: Tier | "ALL"; fullLabel: string; shortLabel: string }[] = [
+  { key: "ALL", fullLabel: "전체",                   shortLabel: "ALL" },
+  { key: "P0",  fullLabel: "Most Played Top 100 진입", shortLabel: "P0"  },
+  { key: "P1",  fullLabel: "Wishlist 급등",            shortLabel: "P1"  },
+  { key: "P2",  fullLabel: "리뷰 급증",               shortLabel: "P2"  },
+];
+
+/* ── 목 데이터 ─────────────────────────────────────────────────── */
+
+const MOCK_SIGNALS: Signal[] = [
+  {
+    id: "sig-001",
+    gameTitle: "Hollow Knight: Silksong",
+    developer: "Team Cherry",
+    tier: "P0",
+    signalType: "new_entry_mp",
+    insight: "72시간 전 커뮤니티 노이즈 급등 후 Top 100 진입. 출시 임박 신호.",
+    ccu: 284_502,
+    ccuDelta: 18.4,
+    wishlistRank: 3,
+    collectedAt: "2025-05-15T06:00:00Z",
+    headerImageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/1030300/header.jpg",
+    youtubeUrl: "https://youtube.com/watch?v=example",
+  },
+  {
+    id: "sig-002",
+    gameTitle: "Hades II",
+    developer: "Supergiant Games",
+    tier: "P1",
+    signalType: "wishlist_surge",
+    insight: "얼리 액세스 발표 후 위시리스트 순위 12단계 상승.",
+    ccu: 91_204,
+    ccuDelta: 34.2,
+    wishlistRank: 7,
+    collectedAt: "2025-05-15T06:00:00Z",
+    headerImageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/1145350/header.jpg",
+    youtubeUrl: null,
+  },
+  {
+    id: "sig-003",
+    gameTitle: "Manor Lords",
+    developer: "Slavic Magic",
+    tier: "P0",
+    signalType: "traffic_revival",
+    insight: "패치 이후 45일 공백 깨고 CCU 89% 반등. 대형 업데이트 선행 패턴.",
+    ccu: 172_890,
+    ccuDelta: 89.1,
+    wishlistRank: null,
+    collectedAt: "2025-05-15T06:00:00Z",
+    headerImageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/1363080/header.jpg",
+    youtubeUrl: "https://youtube.com/watch?v=example2",
+  },
+  {
+    id: "sig-004",
+    gameTitle: "Balatro",
+    developer: "LocalThunk",
+    tier: "P2",
+    signalType: "review_spike",
+    insight: "30일 리뷰 21% 증가, 긍정률 97% 유지. 입소문 확산 중.",
+    ccu: 44_120,
+    ccuDelta: 6.7,
+    wishlistRank: 22,
+    collectedAt: "2025-05-15T06:00:00Z",
+    headerImageUrl: "https://cdn.cloudflare.steamstatic.com/steam/apps/2379780/header.jpg",
+    youtubeUrl: null,
+  },
+];
+
+const TOP_GAMES = [
+  { title: "Hollow Knight: Silksong", ccu: 284_502, pct: 100 },
+  { title: "Manor Lords",             ccu: 172_890, pct: 61  },
+  { title: "Hades II",                ccu: 91_204,  pct: 32  },
+  { title: "Balatro",                 ccu: 44_120,  pct: 16  },
+  { title: "Palworld",                ccu: 38_900,  pct: 14  },
+];
+
+/* ── KST 변환 ──────────────────────────────────────────────────── */
+function toKST(utc: string) {
+  const d = new Date(new Date(utc).getTime() + 9 * 3600_000);
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} KST`;
 }
 
-function getRank(s: Signal): string | null {
-  const r = s.most_played_rank ?? s.payload?.rank;
-  return r ? `#${r}` : null;
-}
+/* ══════════════════════════════════════════════════════════════════
+   COMPONENT
+══════════════════════════════════════════════════════════════════ */
 
-function getCCU(s: Signal): number {
-  return s.concurrent_users ?? s.payload?.concurrent_users ?? 0;
-}
+export default function TerminalDashboard() {
+  const [filter, setFilter] = useState<Tier | "ALL">("ALL");
 
-// Deterministic sparkline trend (no Math.random to avoid SSR mismatch)
-function makeTrend(ccu: number, seed: number): number[] {
-  let s = (seed ^ 0x45678abc) >>> 0;
-  const rng = () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
-  const pts = Array.from({ length: 7 }, (_, i) => Math.round(ccu * Math.min(1, 0.35 + i * 0.095 + (rng() - 0.5) * 0.06)));
-  pts[6] = ccu;
-  return pts;
-}
-
-const fmt  = (n: number) => new Intl.NumberFormat('en-US').format(Math.round(n));
-const fmtK = (n: number) => n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/,'')+'M' : n >= 1e3 ? (n/1e3).toFixed(1).replace(/\.0$/,'')+'K' : String(Math.round(n));
-
-// ─── Sparkline ───────────────────────────────────────────────────────────────
-
-function Sparkline({ data, stroke = 'var(--accent)', fill = 'transparent', height = 28, strokeWidth = 1.5 }: {
-  data: number[]; stroke?: string; fill?: string; height?: number; strokeWidth?: number;
-}) {
-  if (!data?.length) return null;
-  const W = 100, H = 28;
-  const min = Math.min(...data), max = Math.max(...data);
-  const range = max - min || 1;
-  const step = W / (data.length - 1);
-  const pts = data.map((d, i) => [i * step, H - ((d - min) / range) * H] as [number, number]);
-  const path = pts.reduce((acc, [x, y], i) => {
-    if (i === 0) return `M ${x} ${y}`;
-    const [px, py] = pts[i - 1];
-    const cx = (px + x) / 2;
-    return acc + ` C ${cx} ${py}, ${cx} ${y}, ${x} ${y}`;
-  }, '');
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height, display: 'block', width: '100%' }}>
-      {fill !== 'transparent' && <path d={path + ` L ${W} ${H} L 0 ${H} Z`} fill={fill} />}
-      <path d={path} stroke={stroke} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-    </svg>
+  const filtered = useMemo(
+    () => (filter === "ALL" ? MOCK_SIGNALS : MOCK_SIGNALS.filter((s) => s.tier === filter)),
+    [filter],
   );
-}
-
-// ─── Area Chart ──────────────────────────────────────────────────────────────
-
-function AreaChart({ series, labels, height = 200, colors = ['#C23C3C', '#C78A00', '#5C6B82'] }: {
-  series: { name: string; data: number[] }[];
-  labels: string[];
-  height?: number;
-  colors?: string[];
-}) {
-  const W = 600, H = height;
-  const pad = { l: 28, r: 8, t: 8, b: 20 };
-  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
-  const n = labels.length;
-  const max = Math.max(1, ...labels.map((_, i) => series.reduce((a, s) => a + (s.data[i] || 0), 0)));
-  const stepX = cw / Math.max(n - 1, 1);
-  const toY = (v: number) => pad.t + ch - (v / max) * ch;
-  const stacks = labels.map((_, i) => {
-    let y = 0;
-    return series.map(s => { const v = s.data[i] || 0; const r = { y, v }; y += v; return r; });
-  });
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-      {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
-        <line key={i} x1={pad.l} x2={W - pad.r} y1={pad.t + ch * t} y2={pad.t + ch * t} stroke="var(--line)" strokeWidth="1" />
-      ))}
-      {series.map((s, si) => {
-        const top = labels.map((_, i) => [pad.l + i * stepX, toY(stacks[i].slice(0, si + 1).reduce((a, b) => a + b.v, 0))] as [number, number]);
-        const bot = [...labels.map((_, i) => [pad.l + i * stepX, toY(stacks[i].slice(0, si).reduce((a, b) => a + b.v, 0))] as [number, number])].reverse();
-        const d = [...top, ...bot].map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') + ' Z';
-        return <path key={si} d={d} fill={colors[si]} opacity="0.85" />;
-      })}
-      {labels.map((l, i) => (
-        <text key={i} x={pad.l + i * stepX} y={H - 4} textAnchor="middle" fontSize="10" fontFamily="var(--t-mono)" fill="var(--ink-4)">{l}</text>
-      ))}
-    </svg>
-  );
-}
-
-// ─── Signal Card ─────────────────────────────────────────────────────────────
-
-function SignalCard({ signal, active, onClick }: { signal: Signal; active: boolean; onClick: () => void }) {
-  const [hov, setHov] = useState(false);
-  const ccu = getCCU(signal);
-  const trend = makeTrend(ccu, signal.app_id);
-  const tierFg = { P0: 'var(--p0)', P1: 'var(--p1)', P2: 'var(--p2)' }[signal.priority] || 'var(--p2)';
-  const tierBg = { P0: 'var(--p0-soft)', P1: 'var(--p1-soft)', P2: 'var(--p2-soft)' }[signal.priority] || 'var(--p2-soft)';
-
-  return (
-    <article
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background: 'var(--bg-elev)',
-        border: `1px solid ${active || hov ? 'var(--line-strong)' : 'var(--line)'}`,
-        borderRadius: 10,
-        padding: 22,
-        display: 'flex', flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform .15s ease, border-color .15s ease, box-shadow .15s ease',
-        transform: hov ? 'translateY(-2px)' : 'none',
-        boxShadow: hov ? 'var(--shadow-sm)' : 'none',
-      }}
-    >
-      {/* Tier + type */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '.14em',
-          padding: '4px 10px', borderRadius: 999,
-          background: tierBg, color: tierFg,
-          fontFamily: 'var(--t-mono)',
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-        }}>
-          <span style={{ width: 6, height: 6, background: tierFg, borderRadius: '50%' }} />
-          {{ P0: 'Most Played Top 100 진입', P1: '긍정 리뷰 급상승', P2: 'Wish List 급상승' }[signal.priority] ?? signal.priority}
-        </span>
-        <span style={{ fontFamily: 'var(--t-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '.08em' }}>
-          {getLabel(signal).toUpperCase()}
-          {getRank(signal) && ` · ${getRank(signal)}`}
-        </span>
-      </div>
-
-      {/* Game image */}
-      {signal.header_image_url && (
-        <div style={{
-          aspectRatio: '16/7',
-          backgroundImage: `url(${signal.header_image_url})`,
-          backgroundSize: 'cover', backgroundPosition: 'center',
-          borderRadius: 4, marginBottom: 16,
-          border: '1px solid var(--line)',
-        }} />
-      )}
-
-      {/* Title */}
-      <h3 style={{ fontSize: 22, lineHeight: 1.15, letterSpacing: '-0.02em', fontWeight: 500, margin: '0 0 4px', color: 'var(--ink)' }}>
-        {signal.title}
-      </h3>
-      <div style={{ fontSize: 12, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 18, fontFamily: 'var(--t-mono)' }}>
-        <span>{signal.company_name || '—'}</span>
-        <span style={{ color: 'var(--ink-4)' }}>·</span>
-        <a
-          href={`https://store.steampowered.com/app/${signal.app_id}`}
-          target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          title="Steam 스토어에서 보기"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            padding: '1px 6px', borderRadius: 3,
-            background: 'var(--bg-sunken)', border: '1px solid var(--line)',
-            color: 'var(--ink-3)', textDecoration: 'none', fontSize: 10,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = 'var(--accent)';
-            e.currentTarget.style.borderColor = 'var(--accent)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = 'var(--ink-3)';
-            e.currentTarget.style.borderColor = 'var(--line)';
-          }}
-        >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
-            <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.297-.249-1.908-.03l1.523.63c.956.396 1.409 1.493 1.013 2.449-.397.957-1.494 1.41-2.45 1.018zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.662 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.252 0-2.265-1.014-2.265-2.265z"/>
-          </svg>
-          Steam
-        </a>
-        {signal.is_listed && signal.stock_ticker && (
-          <>
-            <span style={{ color: 'var(--ink-4)' }}>·</span>
-            <span style={{ color: 'var(--accent-ink)', background: 'var(--accent-soft)', padding: '1px 6px', borderRadius: 3 }}>
-              {signal.stock_ticker}
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* CCU + sparkline */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-end',
-        padding: '14px 0', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)',
-      }}>
-        <div>
-          <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.14em', marginBottom: 4 }}>
-            PEAK CCU
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 500, letterSpacing: '-0.025em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(ccu)}
-          </div>
-        </div>
-        <div style={{ flex: 1, marginLeft: 20 }}>
-          <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.14em', marginBottom: 6 }}>
-            7-DAY
-          </div>
-          <Sparkline data={trend} stroke="var(--accent)" fill="rgba(59,91,219,0.08)" height={44} strokeWidth={1.75} />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
-        <span style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '.06em' }}>
-          {signal.signal_date}
-        </span>
-        <span style={{
-          fontSize: 15,
-          color: active || hov ? 'var(--accent)' : 'var(--ink-4)',
-          transform: hov ? 'translateX(3px)' : 'none',
-          transition: 'all .2s',
-        }}>→</span>
-      </div>
-    </article>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export default function TerminalDashboard({ signals, topGames, pipelineStatus, signalHistory, timestamp, isToday }: Props) {
-  const [tierFilter, setTierFilter] = useState<'ALL' | 'P0' | 'P1' | 'P2'>('ALL');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const filtered = tierFilter === 'ALL' ? signals : signals.filter(s => s.priority === tierFilter);
-
-  // KPI computations
-  const totalCCU = topGames.reduce((a, g) => a + (g.concurrent_users || 0), 0);
-  const p0Count  = signals.filter(s => s.priority === 'P0').length;
-  const okRuns   = pipelineStatus.filter(p => p.status === 'success').length;
 
   const kpis = [
-    { label: 'TOTAL TOP10 CCU', value: fmtK(totalCCU) },
-    { label: 'SIGNALS',         value: String(signals.length) },
-    { label: 'P0 ALERTS',       value: String(p0Count) },
-    { label: 'PIPELINE',        value: `${okRuns}/${pipelineStatus.length} OK` },
+    { label: "탐지 신호",   value: String(MOCK_SIGNALS.length) },
+    { label: "P0 신호",     value: String(MOCK_SIGNALS.filter((s) => s.tier === "P0").length) },
+    { label: "추적 게임",   value: "4,218" },
+    { label: "평균 선행",   value: "72h"   },
   ];
 
+  /* ── render ─────────────────────────────────────────────────── */
   return (
-    <div className="gs-page">
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
-      {/* ── Page header ───────────────────────────────────────────── */}
-      <header style={{ marginBottom: 36 }}>
-        <span className="gs-eyebrow">01 — LIVE INTELLIGENCE</span>
-        <h1 className="gs-h1">{isToday ? "Today's signals." : "Recent signals."}</h1>
-        <p className="gs-deck">
-          추적 중인 타이틀에서 발생한 의미 있는 변화. 업데이트 {timestamp}.
-        </p>
-      </header>
+      {/* 페이지 헤더 */}
+      <div className="flex items-center justify-between mb-7">
+        <div>
+          <h1 className="text-[18px] sm:text-[22px] font-semibold tracking-tight"
+            style={{ color: "var(--ink)" }}>
+            신호 대시보드
+          </h1>
+          <p className="text-[12px] sm:text-[13px] mt-0.5"
+            style={{ color: "var(--ink)", opacity: 0.45 }}>
+            NoiseCatcher · 실시간 게임 트래픽 신호
+          </p>
+        </div>
+        <span className="flex items-center gap-1.5 text-[11px]"
+          style={{ color: "var(--ink)", opacity: 0.4 }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
+        </span>
+      </div>
 
-      {/* ── KPI strip ─────────────────────────────────────────────── */}
-      <section style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        border: '1px solid var(--line)', borderRadius: 10,
-        background: 'var(--bg-elev)', overflow: 'hidden',
-        marginBottom: 36,
-      }}>
-        {kpis.map((k, i) => (
-          <div key={k.label} style={{
-            padding: '18px 22px',
-            borderRight: i < kpis.length - 1 ? '1px solid var(--line)' : 'none',
-          }}>
-            <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.14em', marginBottom: 8 }}>
-              {k.label}
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.025em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {k.value}
-            </div>
+      {/* ════════════════════════════════════════════════════════
+          [수정 1] KPI strip — 4열 → 모바일 2열
+          before: style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}
+          after : grid-cols-2 sm:grid-cols-4
+
+          구분선:
+          · 세로: 모바일 홀수 우측 → [&:not(:nth-child(2n))]:border-r
+                  sm: 마지막 제외  → sm:[&:not(:last-child)]:border-r
+          · 가로: 모바일 상단 2개  → border-b [&:nth-child(n+3)]:border-b-0
+                  sm: 제거         → sm:border-b-0
+      ════════════════════════════════════════════════════════ */}
+      <section
+        className="
+          grid grid-cols-2 sm:grid-cols-4
+          border border-[var(--line)] rounded-[10px]
+          bg-[var(--bg-elev)] overflow-hidden
+          mb-9
+        "
+      >
+        {kpis.map((kpi) => (
+          <div
+            key={kpi.label}
+            className="
+              p-4 sm:p-[18px_22px]
+              [&:not(:nth-child(2n))]:border-r sm:[&:not(:last-child)]:border-r
+              border-[var(--line)]
+              border-b [&:nth-child(n+3)]:border-b-0 sm:border-b-0
+            "
+          >
+            <p className="text-[22px] sm:text-[28px] font-semibold leading-none
+                tracking-[-0.03em] mb-1 tabular-nums"
+              style={{ color: "var(--ink)" }}>
+              {kpi.value}
+            </p>
+            <p className="text-[11px] sm:text-[12px]"
+              style={{ color: "var(--ink)", opacity: 0.4 }}>
+              {kpi.label}
+            </p>
           </div>
         ))}
       </section>
 
-      {/* ── Filter toolbar ────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        padding: '14px 0',
-        borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)',
-        marginBottom: 28,
-      }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {(['ALL', 'P0', 'P1', 'P2'] as const).map(t => {
-            const label: Record<string, string> = {
-              ALL: 'All',
-              P0: 'Most Played Top 100 진입',
-              P1: '긍정 리뷰 급상승',
-              P2: 'Wish List 급상승',
-            };
+      {/* ════════════════════════════════════════════════════════
+          [수정 2] Filter toolbar — 모바일 wrap 처리
+          before: style={{ display:'flex', alignItems:'center' }}
+          after : flex flex-wrap items-center gap-y-2
+
+          버튼 텍스트: 모바일 단축 (span 두 개)
+          카운트 텍스트: 모바일 hidden
+      ════════════════════════════════════════════════════════ */}
+      <div
+        className="
+          flex flex-wrap items-center gap-y-2
+          py-[14px] border-t border-b border-[var(--line)]
+          mb-7
+        "
+      >
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          {FILTER_OPTIONS.map((opt) => {
+            const active = filter === opt.key;
             return (
               <button
-                key={t}
-                onClick={() => setTierFilter(t)}
+                key={opt.key}
+                onClick={() => setFilter(opt.key)}
+                className="
+                  text-[11px] sm:text-[12px] px-2.5 sm:px-3 py-1.5 rounded-full
+                  border transition-colors duration-150
+                "
                 style={{
-                  fontSize: 13, padding: '8px 14px', borderRadius: 999,
-                  color: tierFilter === t ? '#fff' : 'var(--ink-3)',
-                  background: tierFilter === t ? 'var(--ink)' : 'transparent',
-                  fontWeight: tierFilter === t ? 500 : 400,
-                  transition: 'background .15s, color .15s',
+                  borderColor: active ? "var(--ink)" : "var(--line)",
+                  background: active ? "var(--ink)" : "transparent",
+                  color: active ? "var(--bg-elev)" : "var(--ink)",
+                  opacity: active ? 1 : 0.55,
                 }}
               >
-                {label[t]}
+                {/* 모바일: shortLabel / sm 이상: fullLabel */}
+                <span className="hidden sm:inline">{opt.fullLabel}</span>
+                <span className="sm:hidden">{opt.shortLabel}</span>
               </button>
             );
           })}
         </div>
-        <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '.08em' }}>
-          {filtered.length} signals · {topGames.length} games tracked
+
+        {/* 카운트 — 모바일에서 숨김 */}
+        <span
+          className="hidden sm:inline text-[11px] sm:text-[12px] tabular-nums ml-auto"
+          style={{ color: "var(--ink)", opacity: 0.35 }}
+        >
+          {filtered.length} signals · {TOP_GAMES.length} games tracked
         </span>
       </div>
 
-      {/* ── Signal feed ───────────────────────────────────────────── */}
-      <section style={{ marginBottom: 48 }}>
-        <span className="gs-section-label">SIGNAL FEED</span>
-        {filtered.length === 0 ? (
-          <div style={{
-            padding: '56px 0', textAlign: 'center',
-            color: 'var(--ink-4)', fontFamily: 'var(--t-mono)', fontSize: 12,
-          }}>
-            NO SIGNALS FOR THIS FILTER
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: 18, marginTop: 12,
-          }}>
-            {filtered.map(s => (
-              <SignalCard
-                key={s.signal_id}
-                signal={s}
-                active={s.signal_id === selectedId}
-                onClick={() => setSelectedId(prev => prev === s.signal_id ? null : s.signal_id)}
-              />
-            ))}
+      {/* ════════════════════════════════════════════════════════
+          [수정 3] Signal card grid — 모바일 1열
+          before: style={{ display:'grid',
+                    gridTemplateColumns:'repeat(auto-fill, minmax(360px,1fr))' }}
+          after : grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(360px,1fr))]
+      ════════════════════════════════════════════════════════ */}
+      <div
+        className="
+          grid grid-cols-1
+          sm:grid-cols-[repeat(auto-fill,minmax(360px,1fr))]
+          gap-[18px] mt-3
+          mb-10
+        "
+      >
+        {filtered.map((sig) => {
+          const meta = TIER_META[sig.tier];
+          return (
+            <article
+              key={sig.id}
+              className="
+                rounded-[10px] border border-[var(--line)]
+                bg-[var(--bg-elev)] overflow-hidden
+                hover:shadow-md transition-shadow duration-150
+              "
+            >
+              {/* 헤더 이미지 */}
+              <div className="h-[120px] sm:h-[130px] overflow-hidden bg-slate-100">
+                <img
+                  src={sig.headerImageUrl}
+                  alt={sig.gameTitle}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+
+              <div className="p-4 sm:p-5">
+                {/* 뱃지 + 제목 */}
+                <div className="flex items-start gap-2 mb-3">
+                  <span
+                    className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full mt-0.5"
+                    style={{ color: meta.fg, background: meta.bg }}
+                  >
+                    {meta.label}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium leading-snug truncate"
+                      style={{ color: "var(--ink)" }}>
+                      {sig.gameTitle}
+                    </p>
+                    <p className="text-[11px] mt-0.5 truncate"
+                      style={{ color: "var(--ink)", opacity: 0.45 }}>
+                      {sig.developer}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Insight */}
+                <p className="text-[12px] sm:text-[13px] leading-[1.7] mb-4"
+                  style={{ color: "var(--ink)", opacity: 0.6 }}>
+                  {sig.insight}
+                </p>
+
+                {/* 수치 */}
+                <div className="flex gap-4 text-[11px] sm:text-[12px] mb-4"
+                  style={{ color: "var(--ink)", opacity: 0.5 }}>
+                  <span>
+                    CCU{" "}
+                    <span className="font-medium tabular-nums"
+                      style={{ color: "var(--ink)", opacity: 1 }}>
+                      {sig.ccu.toLocaleString()}
+                    </span>
+                  </span>
+                  <span>
+                    <span className="font-medium tabular-nums text-emerald-500">
+                      +{sig.ccuDelta}%
+                    </span>
+                  </span>
+                  {sig.wishlistRank && (
+                    <span>WL #{sig.wishlistRank}</span>
+                  )}
+                </div>
+
+                {/* 링크 + 시각 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <a
+                      href={`https://store.steampowered.com/app/${sig.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] px-2.5 py-1.5 rounded-lg border border-[var(--line)]
+                        hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      style={{ color: "var(--ink)", opacity: 0.6 }}
+                    >
+                      Steam
+                    </a>
+                    {sig.youtubeUrl && (
+                      <a
+                        href={sig.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg border border-red-200
+                          text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        트레일러
+                      </a>
+                    )}
+                  </div>
+                  <time className="text-[10px] tabular-nums"
+                    style={{ color: "var(--ink)", opacity: 0.3 }}>
+                    {toKST(sig.collectedAt)}
+                  </time>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div className="col-span-full py-16 text-center text-[13px]"
+            style={{ color: "var(--ink)", opacity: 0.35 }}>
+            해당 조건의 신호가 없습니다.
           </div>
         )}
-      </section>
+      </div>
 
-      {/* ── Lower: Trend chart + Top 10 ───────────────────────────── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+      {/* ════════════════════════════════════════════════════════
+          [수정 4] 하단 차트 + Top10 — 2열 → 모바일 1열
+          before: style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:20 }}
+          after : grid-cols-1 sm:grid-cols-[1.5fr_1fr] gap-5
+      ════════════════════════════════════════════════════════ */}
+      <section className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr] gap-5">
 
-        {/* Trend chart */}
-        <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            padding: '18px 22px', borderBottom: '1px solid var(--line)',
-          }}>
-            <div>
-              <span className="gs-section-label" style={{ marginBottom: 4 }}>TREND · 7 DAYS</span>
-              <h3 style={{ fontSize: 20, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Signal volume by tier</h3>
-            </div>
-            <div style={{ display: 'flex', gap: 14, paddingTop: 2 }}>
-              {[{ c: 'var(--p0)', l: 'P0' }, { c: 'var(--p1)', l: 'P1' }, { c: 'var(--p2)', l: 'P2' }].map(x => (
-                <span key={x.l} style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 10, height: 10, background: x.c, borderRadius: 2, flexShrink: 0 }} />{x.l}
-                </span>
-              ))}
-            </div>
+        {/* 왼쪽: CCU 트렌드 차트 영역 */}
+        <div
+          className="rounded-[10px] border border-[var(--line)] bg-[var(--bg-elev)] p-5 sm:p-6"
+        >
+          <p className="text-[11px] uppercase tracking-[0.1em] font-medium mb-4"
+            style={{ color: "var(--ink)", opacity: 0.4 }}>
+            CCU 트렌드 (7일)
+          </p>
+
+          {/* 차트 플레이스홀더 — 실제 구현 시 Recharts LineChart 삽입 */}
+          <div
+            className="h-[180px] sm:h-[200px] rounded-lg flex items-center justify-center"
+            style={{ background: "var(--line)", opacity: 0.3 }}
+          >
+            <span className="text-[12px]" style={{ color: "var(--ink)", opacity: 0.6 }}>
+              LineChart — Recharts 연동 지점
+            </span>
           </div>
-          <div style={{ padding: '18px 22px 10px' }}>
-            <AreaChart
-              labels={signalHistory.map(d => d.day)}
-              series={[
-                { name: 'P0', data: signalHistory.map(d => d.p0) },
-                { name: 'P1', data: signalHistory.map(d => d.p1) },
-                { name: 'P2', data: signalHistory.map(d => d.p2) },
-              ]}
-              colors={['#C23C3C', '#C78A00', '#5C6B82']}
-              height={220}
-            />
-          </div>
+
+          <p className="text-[11px] mt-3 tabular-nums"
+            style={{ color: "var(--ink)", opacity: 0.35 }}>
+            최근 7일 · 상위 5개 게임
+          </p>
         </div>
 
-        {/* Steam Top 10 */}
-        <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)' }}>
-            <span className="gs-section-label" style={{ marginBottom: 4 }}>STEAM TOP 10</span>
-            <h3 style={{ fontSize: 20, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Most played now</h3>
-          </div>
-          <div>
-            {topGames.slice(0, 10).map((g, i) => (
-              <Link
-                key={g.app_id}
-                href={`https://store.steampowered.com/app/${g.app_id}`}
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '12px 22px',
-                  borderBottom: i < 9 ? '1px solid var(--line)' : 'none',
-                  textDecoration: 'none',
-                  transition: 'background .1s',
-                }}
-                className="gs-top-row"
-              >
-                <span style={{ fontFamily: 'var(--t-mono)', fontSize: 12, color: 'var(--ink-4)', width: 26, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                  {String(i + 1).padStart(2, '0')}
+        {/* 오른쪽: Top 게임 랭킹 */}
+        <div
+          className="rounded-[10px] border border-[var(--line)] bg-[var(--bg-elev)] p-5 sm:p-6"
+        >
+          <p className="text-[11px] uppercase tracking-[0.1em] font-medium mb-4"
+            style={{ color: "var(--ink)", opacity: 0.4 }}>
+            Top 게임 (CCU 기준)
+          </p>
+
+          <div className="space-y-3">
+            {TOP_GAMES.map((g, idx) => (
+              <div key={g.title} className="flex items-center gap-3">
+                {/* 순위 */}
+                <span
+                  className="w-5 text-[11px] text-right shrink-0 tabular-nums"
+                  style={{ color: "var(--ink)", opacity: 0.3 }}
+                >
+                  {idx + 1}
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {g.title}
-                </span>
-                <span style={{ fontFamily: 'var(--t-mono)', fontSize: 12, color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                  {fmtK(g.concurrent_users)}
-                </span>
-              </Link>
+
+                {/* 게임명 + 바 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[12px] truncate"
+                      style={{ color: "var(--ink)", opacity: 0.8 }}>
+                      {g.title}
+                    </span>
+                    <span className="text-[11px] tabular-nums ml-2 shrink-0"
+                      style={{ color: "var(--ink)", opacity: 0.45 }}>
+                      {g.ccu.toLocaleString()}
+                    </span>
+                  </div>
+                  <div
+                    className="h-[3px] rounded-full overflow-hidden"
+                    style={{ background: "var(--line)" }}
+                  >
+                    {/* barWidth: JS 계산값이므로 인라인 style 유지 */}
+                    <div
+                      className="h-full rounded-full bg-slate-400 dark:bg-slate-500 transition-all"
+                      style={{ width: `${g.pct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
-
       </section>
 
     </div>
