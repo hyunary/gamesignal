@@ -1,383 +1,257 @@
-/**
- * app/about/page.tsx — NoiseCatcher
- *
- * 반응형 수정 6개 적용:
- *  [수정 1] Hero h1       style fontSize:64 → text-[40px] sm:text-[64px]
- *  [수정 2] Stats strip   4열 → 모바일 2열
- *  [수정 3] Principles    3열 → 모바일 1열
- *  [수정 4] Timeline      2단 → 모바일 1단 + 내부 행 열 너비 축소
- *  [수정 5] Pipeline      2열 → 모바일 1열
- *  [수정 6] CTA 패딩      p-8 → sm:p-[56px_48px]
- *
- * CSS 변수 --line / --bg-elev / --ink 유지
- */
+import { getAboutStats } from '../lib/queries';
+import TerminalShell from '../components/TerminalShell';
+import Link from 'next/link';
+import MadeBySection from '../components/sections/MadeBySection';
 
-export default function AboutPage() {
-  /* ── 데이터 ─────────────────────────────────────────────────── */
-  const stats = [
-    { value: "4,200+", label: "추적 게임 수" },
-    { value: "98%",    label: "신호 정확도" },
-    { value: "72h",    label: "평균 선행 시간" },
-    { value: "340+",   label: "누적 사용자" },
-  ];
+export const revalidate = 0;
 
-  const principles = [
-    {
-      no: "01",
-      title: "노이즈는 정보다",
-      body: "커뮤니티 노이즈, 검색 트렌드, 리뷰 패턴 — 대부분이 걸러내는 것들 안에 신호가 있습니다.",
-    },
-    {
-      no: "02",
-      title: "타이밍이 전부다",
-      body: "신호는 늦으면 의미가 없습니다. 급등 전 72시간, 그 창을 잡는 것이 NoiseCatcher의 존재 이유입니다.",
-    },
-    {
-      no: "03",
-      title: "데이터는 단순해야 한다",
-      body: "복잡한 분석보다 명확한 한 줄의 신호가 더 가치 있습니다. 노이즈는 우리가 처리합니다.",
-    },
-  ];
+const PRINCIPLES = [
+  {
+    tag: '01',
+    title: 'Signals, not noise',
+    body: '모든 Steam 데이터가 의미 있지는 않습니다. 우리는 실제 투자 판단에 쓸 수 있는 변화만 추출합니다.',
+  },
+  {
+    tag: '02',
+    title: 'Analyst perspective',
+    body: 'VC·증권사 애널리스트 관점에서 뉴스와 트래픽 데이터를 해석합니다. 단순 집계가 아닌 맥락과 함의를 제공합니다.',
+  },
+  {
+    tag: '03',
+    title: 'Automated pipeline',
+    body: '매일 KST 06:00 자동 수집·분석 파이프라인이 실행됩니다. 사람의 개입 없이 일관된 품질을 유지합니다.',
+  },
+];
 
-  const timeline = [
-    {
-      date: "2024 Q1",
-      title: "첫 번째 신호 포착",
-      desc: "스팀 Most Played 데이터를 처음 수집하고 패턴을 발견했습니다.",
-    },
-    {
-      date: "2024 Q2",
-      title: "알고리즘 v1 완성",
-      desc: "커뮤니티·검색·리뷰 노이즈를 통합한 첫 신호 엔진을 완성했습니다.",
-    },
-    {
-      date: "2024 Q3",
-      title: "베타 사용자 50명",
-      desc: "첫 베타 그룹과 함께 신호 정확도를 검증하고 피드백을 수집했습니다.",
-    },
-    {
-      date: "2025 Q1",
-      title: "NoiseCatcher 공식 런칭",
-      desc: "서비스를 공개하고 지인 네트워크부터 확산을 시작했습니다.",
-    },
-  ];
+const TIMELINE = [
+  { year: '2024', label: 'PROTOTYPE', body: 'Steam 신호 감지 알고리즘 초기 버전 개발. GitHub Actions 기반 자동화 파이프라인 구축.' },
+  { year: '2025', label: 'MVP',       body: '뉴스 클리핑·판매량 예측 기능 추가. Supabase Edge Function 연동. 서비스 런칭.' },
+  { year: '2026', label: 'NOW',       body: '에디토리얼 UI 리뉴얼. 오케스트레이터 자동 예측 제안 시스템 도입.' },
+];
 
-  const pipeline = [
-    {
-      step: "01",
-      title: "데이터 수집",
-      desc: "스팀 차트·커뮤니티·검색 트렌드를 매일 자동 수집합니다.",
-      tag: "Steam API · SteamSpy · 검색 노이즈",
-    },
-    {
-      step: "02",
-      title: "노이즈 필터링",
-      desc: "일시적 스파이크와 실제 상승 신호를 알고리즘으로 분리합니다.",
-      tag: "ALGO-SPEC-001 v1.1 기반",
-    },
-    {
-      step: "03",
-      title: "신호 생성",
-      desc: "5종 신호 유형으로 분류하고 등급을 부여합니다.",
-      tag: "P0 / P1 우선순위 체계",
-    },
-    {
-      step: "04",
-      title: "리포트 전달",
-      desc: "매주 확정 신호를 구독자에게 이메일로 발송합니다.",
-      tag: "Daily Digest · 즉시 발송 선택",
-    },
+const FAQS = [
+  { q: '데이터는 얼마나 자주 업데이트되나요?', a: '매일 KST 06:00 GitHub Actions 파이프라인이 실행되어 Steam 트래픽, 뉴스, 예측 데이터를 자동으로 수집합니다.' },
+  { q: '판매량 예측은 어떤 방식으로 계산하나요?', a: 'Game Sales Predictor v1.1 모델을 기반으로 장르, 개발사 이력, Steam 위시리스트 트래픽, 유사 게임 벤치마크를 종합하여 Bear/Base/Bull 3개 시나리오를 생성합니다.' },
+  { q: 'P0/P1/P2 시그널 티어는 무엇을 의미하나요?', a: 'P0는 즉각적인 투자 주목이 필요한 고우선순위 시그널, P1은 중요 변화, P2는 모니터링 대상 변화입니다. 알고리즘이 변화의 크기와 속도를 기반으로 자동 분류합니다.' },
+  { q: '인벤 뉴스 클리핑은 어떻게 작동하나요?', a: '매일 인벤(inven.co.kr)의 게임 업계 뉴스를 수집하고, Claude AI가 VC·애널리스트 관점의 코멘트와 관련 주식 티커를 자동으로 생성합니다.' },
+];
+
+export default async function AboutPage() {
+  const stats = await getAboutStats().catch(() => null);
+
+  const statItems = [
+    { value: stats ? `${stats.total_clips}+` : '—', label: 'NEWS CLIPS' },
+    { value: stats ? `${stats.total_days}일`  : '—', label: 'CLIPPING DAYS' },
+    { value: stats ? `${stats.total_forecasts}종` : '—', label: 'FORECAST GAMES' },
+    { value: stats ? `${stats.total_threads}건` : '—', label: 'FORECAST UPDATES' },
   ];
 
   return (
-    <main className="max-w-[1080px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+    <TerminalShell activeTab="about">
+      <div className="gs-page">
 
-      {/* ══════════════════════════════════════════════════════
-          HERO
-      ══════════════════════════════════════════════════════ */}
-      <section className="mb-16 sm:mb-[72px]">
-        {/*
-          [수정 1] Hero h1 폰트 크기
-          before: style={{ fontSize: 64, lineHeight: 0.95, ... }}
-          after : className 으로 전환, style 속성 제거
-        */}
-        <h1
-          className="text-[40px] sm:text-[64px] leading-[0.95] tracking-[-0.04em] font-medium mb-6"
-          style={{ color: "var(--ink)" }}
-        >
-          노이즈 속에서
-          <br />
-          진짜 신호를 건집니다.
-        </h1>
-
-        <p
-          className="text-[16px] sm:text-[18px] leading-[1.7] max-w-[560px]"
-          style={{ color: "var(--ink)", opacity: 0.55 }}
-        >
-          NoiseCatcher는 스팀·커뮤니티·검색 데이터를 분석해
-          게임 트래픽이 급등하기 전 신호를 포착합니다.
-        </p>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          [수정 2] Stats strip — 4열 → 모바일 2열
-          before: style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}
-          after : grid-cols-2 sm:grid-cols-4
-
-          구분선 규칙
-          · 가로선: 모바일 1·2번 항목(상단행) 하단에만 → [&:nth-child(-n+2)]:border-b
-                   sm에서 모두 제거 → sm:[&:nth-child(-n+2)]:border-b-0
-          · 세로선: 모바일 홀수 항목 우측 → [&:not(:nth-child(2n))]:border-r
-                   sm: 마지막 제외 → sm:[&:not(:last-child)]:border-r
-      ══════════════════════════════════════════════════════ */}
-      <section
-        className="
-          grid grid-cols-2 sm:grid-cols-4
-          border border-[var(--line)] rounded-[10px]
-          bg-[var(--bg-elev)] overflow-hidden
-          mb-[72px]
-        "
-      >
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="
-              p-5 sm:p-[28px_24px]
-              border-b border-[var(--line)] sm:border-b-0
-              [&:nth-child(-n+2)]:border-b sm:[&:nth-child(-n+2)]:border-b-0
-              [&:not(:nth-child(2n))]:border-r sm:[&:not(:last-child)]:border-r
-              border-[var(--line)]
-            "
-          >
-            <p
-              className="text-[26px] sm:text-[34px] font-semibold leading-none tracking-[-0.03em] mb-1.5"
-              style={{ color: "var(--ink)" }}
-            >
-              {stat.value}
-            </p>
-            <p
-              className="text-[11px] sm:text-[13px] leading-snug"
-              style={{ color: "var(--ink)", opacity: 0.45 }}
-            >
-              {stat.label}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          [수정 3] Principles — 3열 → 모바일 1열
-          before: style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:20 }}
-          after : grid-cols-1 sm:grid-cols-3 gap-5
-      ══════════════════════════════════════════════════════ */}
-      <section className="mb-[72px]">
-        <h2
-          className="text-[11px] uppercase tracking-[0.12em] font-medium mb-8"
-          style={{ color: "var(--ink)", opacity: 0.4 }}
-        >
-          원칙
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {principles.map((p) => (
-            <div
-              key={p.no}
-              className="p-6 rounded-[10px] border border-[var(--line)] bg-[var(--bg-elev)]"
-            >
-              <span
-                className="block text-[11px] font-medium mb-4 tabular-nums"
-                style={{ color: "var(--ink)", opacity: 0.3 }}
-              >
-                {p.no}
-              </span>
-              <h3
-                className="text-[15px] font-medium leading-snug mb-2.5"
-                style={{ color: "var(--ink)" }}
-              >
-                {p.title}
-              </h3>
-              <p
-                className="text-[13px] leading-[1.75]"
-                style={{ color: "var(--ink)", opacity: 0.55 }}
-              >
-                {p.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          [수정 4] Timeline — 2단 → 모바일 1단
-          before: style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:64 }}
-          after : grid-cols-1 sm:grid-cols-[1fr_1.6fr] gap-8 sm:gap-16
-
-          내부 행
-          before: style={{ display:'grid', gridTemplateColumns:'120px 1fr', gap:32 }}
-          after : grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr] gap-4 sm:gap-8
-      ══════════════════════════════════════════════════════ */}
-      <section
-        className="
-          grid grid-cols-1 sm:grid-cols-[1fr_1.6fr]
-          gap-8 sm:gap-16 items-start
-          mb-[72px]
-        "
-      >
-        {/* 왼쪽: sticky 제목 */}
-        <div className="sm:sticky sm:top-24">
-          <h2
-            className="text-[11px] uppercase tracking-[0.12em] font-medium mb-3"
-            style={{ color: "var(--ink)", opacity: 0.4 }}
-          >
-            타임라인
-          </h2>
-          <p
-            className="text-[15px] leading-[1.7]"
-            style={{ color: "var(--ink)", opacity: 0.6 }}
-          >
-            사이드 프로젝트로 시작해
-            <br className="hidden sm:block" />
-            실제로 작동하는 걸 확인했습니다.
+        {/* ── Hero ────────────────────────────────────────────────── */}
+        <header style={{ marginBottom: 64, maxWidth: 900 }}>
+          <span className="gs-eyebrow">04 — ABOUT</span>
+          <h1 style={{ fontSize: 64, lineHeight: 0.95, letterSpacing: '-0.04em', fontWeight: 500, margin: '0 0 24px' }}>
+            Signals, not noise.
+          </h1>
+          <p style={{ fontSize: 19, lineHeight: 1.5, color: 'var(--ink-2)', maxWidth: 720 }}>
+            Steam 트래픽 모니터링, 인벤 뉴스 클리핑, 게임 판매량 예측을 통합한
+            투자·산업 분석 인텔리전스 대시보드입니다.
           </p>
-        </div>
+        </header>
 
-        {/* 오른쪽: 행 목록 */}
-        <div>
-          {timeline.map((item) => (
-            <div
-              key={item.date}
-              className="
-                grid grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]
-                gap-4 sm:gap-8 py-[22px]
-                border-b border-[var(--line)] last:border-b-0
-              "
-            >
-              <span
-                className="text-[12px] sm:text-[13px] tabular-nums pt-0.5 shrink-0"
-                style={{ color: "var(--ink)", opacity: 0.35 }}
-              >
-                {item.date}
-              </span>
-              <div>
-                <p
-                  className="text-[14px] sm:text-[15px] font-medium leading-snug mb-1"
-                  style={{ color: "var(--ink)" }}
-                >
-                  {item.title}
-                </p>
-                <p
-                  className="text-[13px] leading-[1.7]"
-                  style={{ color: "var(--ink)", opacity: 0.55 }}
-                >
-                  {item.desc}
-                </p>
+        {/* ── Stats strip ─────────────────────────────────────────── */}
+        <section style={{
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+          border: '1px solid var(--line)', borderRadius: 10,
+          background: 'var(--bg-elev)', overflow: 'hidden',
+          marginBottom: 72,
+        }}>
+          {statItems.map((s, i) => (
+            <div key={s.label} style={{
+              padding: '28px 24px',
+              borderRight: i < statItems.length - 1 ? '1px solid var(--line)' : 'none',
+            }}>
+              <div style={{ fontSize: 40, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {s.value}
+              </div>
+              <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '.14em', marginTop: 10, textTransform: 'uppercase' }}>
+                {s.label}
               </div>
             </div>
           ))}
-        </div>
-      </section>
+        </section>
 
-      {/* ══════════════════════════════════════════════════════
-          [수정 5] Pipeline — 2열 → 모바일 1열
-          before: style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)' }}
-          after : grid-cols-1 sm:grid-cols-2 gap-px bg-[var(--line)]
-      ══════════════════════════════════════════════════════ */}
-      <section className="mb-[72px]">
-        <h2
-          className="text-[11px] uppercase tracking-[0.12em] font-medium mb-8"
-          style={{ color: "var(--ink)", opacity: 0.4 }}
-        >
-          파이프라인
-        </h2>
+        <hr className="gs-heavy-rule" style={{ margin: '0 0 64px' }} />
 
-        <div
-          className="
-            grid grid-cols-1 sm:grid-cols-2
-            gap-px bg-[var(--line)]
-            border border-[var(--line)] rounded-[10px] overflow-hidden
-          "
-        >
-          {pipeline.map((item) => (
-            <div
-              key={item.step}
-              className="p-6 sm:p-8 bg-[var(--bg-elev)]"
-            >
-              <span
-                className="block text-[11px] font-medium mb-5 tabular-nums"
-                style={{ color: "var(--ink)", opacity: 0.3 }}
-              >
-                {item.step}
-              </span>
-              <h3
-                className="text-[15px] font-medium leading-snug mb-2"
-                style={{ color: "var(--ink)" }}
-              >
-                {item.title}
-              </h3>
-              <p
-                className="text-[13px] leading-[1.75] mb-4"
-                style={{ color: "var(--ink)", opacity: 0.55 }}
-              >
-                {item.desc}
-              </p>
-              <span
-                className="inline-block text-[11px] px-2.5 py-1 rounded-full border border-[var(--line)]"
-                style={{ color: "var(--ink)", opacity: 0.45 }}
-              >
-                {item.tag}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          [수정 6] CTA 섹션 패딩
-          before: style={{ padding:'56px 48px' }}
-          after : p-8 sm:p-[56px_48px]
-      ══════════════════════════════════════════════════════ */}
-      <section
-        className="
-          p-8 sm:p-[56px_48px]
-          border border-[var(--line)] rounded-xl
-          bg-[var(--bg-elev)]
-        "
-      >
-        <div className="max-w-[480px]">
-          <h2
-            className="text-[24px] sm:text-[32px] font-medium leading-[1.1] tracking-[-0.025em] mb-4"
-            style={{ color: "var(--ink)" }}
-          >
-            신호를 먼저 받아보세요.
+        {/* ── Principles ──────────────────────────────────────────── */}
+        <section style={{ marginBottom: 72 }}>
+          <span className="gs-section-label">PRINCIPLES</span>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+            How we think about the problem.
           </h2>
-          <p
-            className="text-[14px] sm:text-[15px] leading-[1.75] mb-8"
-            style={{ color: "var(--ink)", opacity: 0.55 }}
-          >
-            매주 탐지된 게임 신호를 이메일로 받아볼 수 있습니다.
-            스팸 없이, 언제든 해지 가능합니다.
-          </p>
-          <a
-            href="/subscribe"
-            className="
-              inline-flex items-center gap-2
-              px-6 py-3 rounded-xl text-sm font-medium
-              bg-slate-900 dark:bg-slate-100
-              text-white dark:text-slate-900
-              hover:bg-slate-700 dark:hover:bg-white
-              transition-colors duration-150
-            "
-          >
-            무료로 신호 받기
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </a>
-        </div>
-      </section>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {PRINCIPLES.map(p => (
+              <article key={p.tag} style={{
+                padding: '28px 26px',
+                border: '1px solid var(--line)', borderRadius: 10,
+                background: 'var(--bg-elev)',
+              }}>
+                <div style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--accent)', fontWeight: 700, letterSpacing: '.14em', marginBottom: 16 }}>
+                  {p.tag}
+                </div>
+                <h3 style={{ fontSize: 20, letterSpacing: '-0.02em', fontWeight: 500, margin: '0 0 10px' }}>{p.title}</h3>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)', margin: 0 }}>{p.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-    </main>
+        <hr className="gs-rule" style={{ margin: '0 0 72px' }} />
+
+        {/* ── Timeline ────────────────────────────────────────────── */}
+        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 64, alignItems: 'start', marginBottom: 72 }}>
+          <div>
+            <span className="gs-section-label">TIMELINE</span>
+            <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 16px' }}>
+              From prototype<br />to platform.
+            </h2>
+            <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
+              소수 엔지니어가 시작한 사이드 프로젝트에서 매일 업데이트되는 인텔리전스 플랫폼으로.
+            </p>
+          </div>
+          <div>
+            {TIMELINE.map((t, i) => (
+              <div key={t.year} style={{
+                display: 'grid', gridTemplateColumns: '120px 1fr', gap: 32,
+                padding: '22px 0',
+                borderBottom: i < TIMELINE.length - 1 ? '1px solid var(--line)' : 'none',
+              }}>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{t.year}</div>
+                  <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10.5, color: 'var(--accent)', letterSpacing: '.14em', marginTop: 4, fontWeight: 600 }}>{t.label}</div>
+                </div>
+                <div style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-2)', paddingTop: 4 }}>{t.body}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <hr className="gs-rule" style={{ margin: '0 0 72px' }} />
+
+        {/* ── Pipeline ────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 72 }}>
+          <span className="gs-section-label">PIPELINE</span>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+            How the data flows.
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+            {[
+              { name: 'SIGNAL_ENGINE',   detail: 'GitHub Actions · 매일 KST 06:00 자동 수집', status: 'LIVE' },
+              { name: 'NEWS_CLIPPER',    detail: 'Inven scraper + Claude AI analysis',          status: 'DAILY' },
+              { name: 'ORCHESTRATOR',    detail: '뉴스 → 예측 제안 자동 생성',                  status: 'AUTO' },
+              { name: 'FORECAST_ENGINE', detail: 'Game Sales Predictor v1.1',                    status: 'MANUAL' },
+            ].map(p => (
+              <div key={p.name} style={{ background: 'var(--bg-elev)', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pos)', flexShrink: 0, boxShadow: '0 0 5px var(--pos)' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--t-mono)', fontSize: 12, fontWeight: 500 }}>{p.name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 3 }}>{p.detail}</div>
+                </div>
+                <span style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--pos)', letterSpacing: '.1em' }}>{p.status}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <hr className="gs-rule" style={{ margin: '0 0 72px' }} />
+
+        {/* ── FAQ ─────────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 72 }}>
+          <span className="gs-section-label">FAQ</span>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+            Frequently asked.
+          </h2>
+          <div style={{ maxWidth: 840 }}>
+            {FAQS.map((f, i) => (
+              <div key={i} style={{ borderTop: '1px solid var(--line)', padding: '20px 4px' }}>
+                <h3 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.012em', margin: '0 0 10px', lineHeight: 1.4 }}>
+                  {f.q}
+                </h3>
+                <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-2)', margin: 0, maxWidth: 680 }}>{f.a}</p>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid var(--line)' }} />
+          </div>
+        </section>
+
+        <MadeBySection />
+
+
+        {/* ── CTA ─────────────────────────────────────────────────── */}
+        <section style={{
+          padding: '56px 48px',
+          border: '1px solid var(--line)', borderRadius: 12,
+          background: 'var(--bg-elev)',
+          marginBottom: stats ? 48 : 0,
+        }}>
+          <span className="gs-section-label">GET STARTED</span>
+          <h2 style={{ fontSize: 40, letterSpacing: '-0.03em', fontWeight: 500, margin: '6px 0 12px', lineHeight: 1.05 }}>
+            Want the signals, not the noise?
+          </h2>
+          <p style={{ fontSize: 16, color: 'var(--ink-2)', margin: '0 0 28px', maxWidth: 520, lineHeight: 1.5 }}>
+            매일 아침 오늘의 핵심 시그널을 확인하세요.
+            Steam 트래픽, 뉴스, 예측 — 한 곳에 통합됩니다.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Link href="/dashboard" style={{
+              padding: '12px 22px', background: 'var(--ink)', color: '#fff',
+              borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: 'none',
+              display: 'inline-block',
+            }}>
+              Open Dashboard →
+            </Link>
+            <Link href="/news" style={{
+              padding: '12px 22px', border: '1px solid var(--line)',
+              borderRadius: 8, fontSize: 14, fontWeight: 500, color: 'var(--ink-2)',
+              textDecoration: 'none', display: 'inline-block',
+            }}>
+              Today&apos;s News
+            </Link>
+          </div>
+        </section>
+
+        {/* ── System ──────────────────────────────────────────────── */}
+        {stats && (
+          <section>
+            <span className="gs-section-label">SYSTEM</span>
+            <div style={{
+              border: '1px solid var(--line)', borderRadius: 8,
+              background: 'var(--bg-elev)', overflow: 'hidden',
+              fontFamily: 'var(--t-mono)', fontSize: 12, marginTop: 12,
+            }}>
+              {([
+                { k: 'VERSION',         v: 'NoiseCatcher MVP v1.0' },
+                { k: 'FRAMEWORK',       v: 'Next.js 14 + Tailwind CSS' },
+                { k: 'FORECAST_MODEL',  v: 'Game Sales Predictor v1.1' },
+                { k: 'LAST_CLIP_DATE',  v: stats.last_clip_date ?? '—' },
+                { k: 'PIPELINE_STATUS', v: '● OPERATIONAL', ok: true },
+              ] as { k: string; v: string; ok?: boolean }[]).map((row, i, arr) => (
+                <div key={row.k} style={{
+                  display: 'flex', gap: 16, padding: '10px 18px',
+                  borderBottom: i < arr.length - 1 ? '1px solid var(--line)' : 'none',
+                }}>
+                  <span style={{ color: 'var(--accent)', minWidth: 180, flexShrink: 0 }}>{row.k}</span>
+                  <span style={{ color: row.ok ? 'var(--pos)' : 'var(--ink)' }}>{row.v}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+      </div>
+    </TerminalShell>
   );
 }
