@@ -1,7 +1,6 @@
 import { getAboutStats } from '../lib/queries';
 import TerminalShell from '../components/TerminalShell';
 import Link from 'next/link';
-import MadeBySection from '../components/sections/MadeBySection';
 
 export const revalidate = 0;
 
@@ -187,7 +186,6 @@ export default async function AboutPage() {
           </div>
         </section>
 
-        <MadeBySection />
 
 
         {/* ── CTA ─────────────────────────────────────────────────── */}
