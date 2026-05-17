@@ -285,7 +285,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, t
       {/* ── Page header ───────────────────────────────────────────── */}
       <header style={{ marginBottom: 36 }}>
         <span className="gs-eyebrow">01 — LIVE INTELLIGENCE</span>
-        <h1 className="gs-h1">{isToday ? "Today&apos;s Noise." : "Recent&apos;s Noise."}</h1>
+        <h1 className="gs-h1">{isToday ? `Today's Noise.` : `Recent Noise.`}</h1>
         <p className="gs-deck">
           추적 중인 타이틀에서 발생한 의미 있는 변화. 업데이트 {timestamp}.
         </p>
