@@ -53,7 +53,7 @@ export default async function AboutPage() {
         <header style={{ marginBottom: 64, maxWidth: 900 }}>
           <span className="gs-eyebrow">04 — ABOUT</span>
           <h1 style={{ fontSize: 64, lineHeight: 0.95, letterSpacing: '-0.04em', fontWeight: 500, margin: '0 0 24px' }}>
-            Signals, not noise.
+            Noise in. Signal out.
           </h1>
           <p style={{ fontSize: 19, lineHeight: 1.5, color: 'var(--ink-2)', maxWidth: 720 }}>
             Steam 트래픽 모니터링, 인벤 뉴스 클리핑, 게임 판매량 예측을 통합한
