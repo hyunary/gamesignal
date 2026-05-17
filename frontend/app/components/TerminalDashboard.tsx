@@ -125,43 +125,6 @@ function Sparkline({ data, stroke = 'var(--accent)', fill = 'transparent', heigh
   );
 }
 
-// ─── Area Chart ──────────────────────────────────────────────────────────────
-
-function AreaChart({ series, labels, height = 200, colors = ['#C23C3C', '#C78A00', '#5C6B82'] }: {
-  series: { name: string; data: number[] }[];
-  labels: string[];
-  height?: number;
-  colors?: string[];
-}) {
-  const W = 600, H = height;
-  const pad = { l: 28, r: 8, t: 8, b: 20 };
-  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
-  const n = labels.length;
-  const max = Math.max(1, ...labels.map((_, i) => series.reduce((a, s) => a + (s.data[i] || 0), 0)));
-  const stepX = cw / Math.max(n - 1, 1);
-  const toY = (v: number) => pad.t + ch - (v / max) * ch;
-  const stacks = labels.map((_, i) => {
-    let y = 0;
-    return series.map(s => { const v = s.data[i] || 0; const r = { y, v }; y += v; return r; });
-  });
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-      {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
-        <line key={i} x1={pad.l} x2={W - pad.r} y1={pad.t + ch * t} y2={pad.t + ch * t} stroke="var(--line)" strokeWidth="1" />
-      ))}
-      {series.map((s, si) => {
-        const top = labels.map((_, i) => [pad.l + i * stepX, toY(stacks[i].slice(0, si + 1).reduce((a, b) => a + b.v, 0))] as [number, number]);
-        const bot = [...labels.map((_, i) => [pad.l + i * stepX, toY(stacks[i].slice(0, si).reduce((a, b) => a + b.v, 0))] as [number, number])].reverse();
-        const d = [...top, ...bot].map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ') + ' Z';
-        return <path key={si} d={d} fill={colors[si]} opacity="0.85" />;
-      })}
-      {labels.map((l, i) => (
-        <text key={i} x={pad.l + i * stepX} y={H - 4} textAnchor="middle" fontSize="10" fontFamily="var(--t-mono)" fill="var(--ink-4)">{l}</text>
-      ))}
-    </svg>
-  );
-}
-
 // ─── Signal Card ─────────────────────────────────────────────────────────────
 
 function SignalCard({ signal, active, onClick }: { signal: Signal; active: boolean; onClick: () => void }) {
@@ -298,7 +261,7 @@ function SignalCard({ signal, active, onClick }: { signal: Signal; active: boole
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function TerminalDashboard({ signals, topGames, pipelineStatus, signalHistory, timestamp, isToday }: Props) {
+export default function TerminalDashboard({ signals, topGames, pipelineStatus, timestamp, isToday }: Props) {
   const [tierFilter, setTierFilter] = useState<'ALL' | 'P0' | 'P1' | 'P2'>('ALL');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -322,7 +285,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
       {/* ── Page header ───────────────────────────────────────────── */}
       <header style={{ marginBottom: 36 }}>
         <span className="gs-eyebrow">01 — LIVE INTELLIGENCE</span>
-        <h1 className="gs-h1">{isToday ? "Today's signals." : "Recent signals."}</h1>
+        <h1 className="gs-h1">{isToday ? "Today&apos;s Noise." : "Recent&apos;s Noise."}</h1>
         <p className="gs-deck">
           추적 중인 타이틀에서 발생한 의미 있는 변화. 업데이트 {timestamp}.
         </p>
@@ -390,7 +353,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
 
       {/* ── Signal feed ───────────────────────────────────────────── */}
       <section style={{ marginBottom: 48 }}>
-        <span className="gs-section-label">SIGNAL FEED</span>
+        <span className="gs-section-label">TODAY&apos;S CATCH</span>
         {filtered.length === 0 ? (
           <div style={{
             padding: '56px 0', textAlign: 'center',
@@ -417,39 +380,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, s
       </section>
 
       {/* ── Lower: Trend chart + Top 10 ───────────────────────────── */}
-      <section style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
-
-        {/* Trend chart */}
-        <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            padding: '18px 22px', borderBottom: '1px solid var(--line)',
-          }}>
-            <div>
-              <span className="gs-section-label" style={{ marginBottom: 4 }}>TREND · 7 DAYS</span>
-              <h3 style={{ fontSize: 20, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Signal volume by tier</h3>
-            </div>
-            <div style={{ display: 'flex', gap: 14, paddingTop: 2 }}>
-              {[{ c: 'var(--p0)', l: 'P0' }, { c: 'var(--p1)', l: 'P1' }, { c: 'var(--p2)', l: 'P2' }].map(x => (
-                <span key={x.l} style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 10, height: 10, background: x.c, borderRadius: 2, flexShrink: 0 }} />{x.l}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div style={{ padding: '18px 22px 10px' }}>
-            <AreaChart
-              labels={signalHistory.map(d => d.day)}
-              series={[
-                { name: 'P0', data: signalHistory.map(d => d.p0) },
-                { name: 'P1', data: signalHistory.map(d => d.p1) },
-                { name: 'P2', data: signalHistory.map(d => d.p2) },
-              ]}
-              colors={['#C23C3C', '#C78A00', '#5C6B82']}
-              height={220}
-            />
-          </div>
-        </div>
+      <section>
 
         {/* Steam Top 10 */}
         <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
