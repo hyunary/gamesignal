@@ -25,8 +25,15 @@ export default async function NewsPage({
     return (order[a.importance as keyof typeof order] ?? 1) - (order[b.importance as keyof typeof order] ?? 1);
   });
 
-  const featured = sortedClips[0] ?? null;
-  const rest = sortedClips.slice(1);
+  // Pick today's LEAD: rotate within "high" importance group by date
+  // so the lead changes each day but stays stable within a day.
+  const highClips = sortedClips.filter(c => c.importance === 'high');
+  const leadPool = highClips.length > 0 ? highClips : sortedClips;
+  const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const dateHash = todayKey.split('-').reduce((sum, n) => sum + parseInt(n, 10), 0);
+  const featuredIndex = leadPool.length > 0 ? dateHash % leadPool.length : 0;
+  const featured = leadPool[featuredIndex] ?? null;
+  const rest = sortedClips.filter(c => c !== featured);
 
   return (
     <TerminalShell activeTab="news">
