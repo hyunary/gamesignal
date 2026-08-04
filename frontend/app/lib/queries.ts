@@ -268,7 +268,7 @@ export interface ForecastThread {
 export async function getAllForecasts(): Promise<Forecast[]> {
   const { rows } = await pool.query(`
     SELECT * FROM forecasts
-    WHERE status != 'draft'
+    WHERE status = 'active'
     ORDER BY updated_at DESC
   `);
   return rows.map(r => ({
