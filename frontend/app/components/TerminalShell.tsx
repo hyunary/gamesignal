@@ -1,5 +1,6 @@
-import { NCLockup, NCSymbol } from '@/app/components/brand/NoiseCatcherLogo';
 import Link from 'next/link';
+import Wordmark from '@/app/components/brand/Wordmark';
+import Monogram from '@/app/components/brand/Monogram';
 
 const NAV_ITEMS = [
   { key: 'dashboard',   label: 'Dashboard',   href: '/dashboard' },
@@ -35,13 +36,11 @@ export default function TerminalShell({
         }}>
 
           {/* Brand */}
-          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <span className="hidden sm:inline">
-              <NCLockup layout="horizontal" size={28} />
-            </span>
-            <span className="sm:hidden">
-              <NCSymbol size={24} />
-            </span>
+          <span className="hidden sm:inline">
+            <Wordmark href="/dashboard" />
+          </span>
+          <Link href="/dashboard" aria-label="NoiseCatcher 대시보드" className="sm:hidden" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Monogram size={24} />
           </Link>
 
           {/* Nav links */}
@@ -105,7 +104,7 @@ export default function TerminalShell({
           fontFamily: 'var(--t-mono)', fontSize: 11,
           color: 'var(--ink-4)', letterSpacing: '.14em',
         }}>
-          GAMESIGNAL · EDITORIAL EDITION · © 2025
+          NOISECATCHER · EDITORIAL EDITION · © {new Date().getFullYear()}
         </span>
       </footer>
 
