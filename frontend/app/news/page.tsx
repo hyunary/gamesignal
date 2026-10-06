@@ -93,7 +93,7 @@ export default async function NewsPage({
                   {featured.analyst_comment && (
                     <div style={{
                       background: 'var(--nc-amber-soft)',
-                      borderLeft: '3px solid #F59E0B',
+                      borderLeft: '3px solid var(--nc-amber)',
                       borderRadius: '0 6px 6px 0',
                       padding: '12px 14px',
                       marginBottom: 16,
@@ -247,7 +247,7 @@ function StoryRow({ clip, idx }: { clip: NewsClip; idx: number }) {
         {clip.analyst_comment && (
           <div style={{
             background: 'var(--nc-amber-soft)',
-            borderLeft: '3px solid #F59E0B',
+            borderLeft: '3px solid var(--nc-amber)',
             borderRadius: '0 6px 6px 0',
             padding: '10px 12px',
             margin: '0 0 10px',
