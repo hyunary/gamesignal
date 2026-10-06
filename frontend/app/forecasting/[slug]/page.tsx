@@ -96,9 +96,9 @@ export default async function ForecastDetailPage({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {[
-                { label: 'Bear', value: forecast.bear_min ? `${forecast.bear_min}만~` : '—', color: 'var(--neg)', bg: 'rgba(176,42,55,0.06)', border: 'rgba(176,42,55,0.18)' },
-                { label: 'Base', value: forecast.base_min && forecast.base_max ? `${forecast.base_min}~${forecast.base_max}만` : '—', color: 'var(--accent)', bg: 'var(--accent-soft)', border: 'rgba(59,91,219,0.2)' },
-                { label: 'Bull', value: forecast.bull_max ? `${forecast.bull_max}만+` : '—', color: 'var(--pos)', bg: 'rgba(31,122,58,0.06)', border: 'rgba(31,122,58,0.18)' },
+                { label: 'Bear', value: forecast.bear_min ? `${forecast.bear_min}만~` : '—', color: 'var(--ink)', bg: 'var(--bg-elev)', border: 'var(--line)' },
+                { label: 'Base', value: forecast.base_min && forecast.base_max ? `${forecast.base_min}~${forecast.base_max}만` : '—', color: 'var(--accent)', bg: 'var(--accent-soft)', border: 'var(--line)' },
+                { label: 'Bull', value: forecast.bull_max ? `${forecast.bull_max}만+` : '—', color: 'var(--ink)', bg: 'var(--bg-elev)', border: 'var(--line)' },
               ].map(s => (
                 <div key={s.label} style={{
                   background: s.bg, border: `1px solid ${s.border}`,
