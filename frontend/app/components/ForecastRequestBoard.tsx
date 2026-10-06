@@ -157,7 +157,7 @@ export default function ForecastRequestBoard() {
             disabled={status === 'submitting'}
             style={{
               background: status === 'success' ? 'var(--pos)' : 'var(--accent)',
-              color: '#fff', border: 'none', borderRadius: 5,
+              color: 'var(--on-ink)', border: 'none', borderRadius: 5,
               padding: '8px 20px', fontFamily: 'var(--t-mono)',
               fontSize: 12, fontWeight: 600,
               cursor: status === 'submitting' ? 'not-allowed' : 'pointer',

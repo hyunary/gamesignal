@@ -239,7 +239,7 @@ function SignalCard({ signal, active, onClick }: { signal: Signal; active: boole
           <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '.14em', marginBottom: 6 }}>
             7-DAY
           </div>
-          <Sparkline data={trend} stroke="var(--accent)" fill="rgba(59,91,219,0.08)" height={44} strokeWidth={1.75} />
+          <Sparkline data={trend} stroke="var(--accent)" fill="var(--accent-soft)" height={44} strokeWidth={1.75} />
         </div>
       </div>
 
@@ -334,7 +334,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, t
                 onClick={() => setTierFilter(t)}
                 style={{
                   fontSize: 13, padding: '8px 14px', borderRadius: 999,
-                  color: tierFilter === t ? '#fff' : 'var(--ink-3)',
+                  color: tierFilter === t ? 'var(--on-ink)' : 'var(--ink-3)',
                   background: tierFilter === t ? 'var(--ink)' : 'transparent',
                   fontWeight: tierFilter === t ? 500 : 400,
                   transition: 'background .15s, color .15s',
