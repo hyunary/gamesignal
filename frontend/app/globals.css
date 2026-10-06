@@ -134,3 +134,188 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    ============================================================ */
 body::-webkit-scrollbar { width: 10px; }
 body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
+
+/* ==========================================================================
+   NoiseCatcher — Analyst Notebook 토큰 브리지 (1단계: 색·형태 전용)
+   ==========================================================================
+   목적
+     기존 앱 변수(--ink, --accent, --line, --p0 …)를 Analyst Notebook 토큰
+     (--nc-*)에 연결한다. 인라인 style 객체가 var(--ink) 등을 소비하므로
+     컴포넌트를 고치지 않고도 전역 톤이 전환된다.
+
+   적용 위치
+     frontend 전역 CSS에서 기존 :root 변수 정의 "뒤"에 둔다.
+     (뒤에 와야 같은 이름의 기존 정의를 덮어쓴다.)
+
+   이번 단계에서 하지 않는 것
+     - 서체: --t-mono 등 폰트 변수는 건드리지 않는다. (2단계 분리)
+     - 인라인 하드코딩 값: borderRadius: 10, '#fff', rgba(59,91,219,0.08) 등은
+       CSS로 덮을 수 없다. 하단 "컴포넌트 후속 작업" 목록 참조.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   1. Analyst Notebook 원본 토큰 (tokens.css와 동일 값)
+      + 앱 구조상 필요한 파생 토큰 3종 (★ 표시)
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --nc-paper: #eeeae1;
+  --nc-sheet: #f8f5ef;
+  --nc-ink: #302f2b;
+  --nc-muted: #68645b;
+  --nc-rust: #a74727;
+  --nc-rust-soft: #f1ded4;
+  --nc-rule: #c9c2b6;
+  --nc-green: #41664c;
+  --nc-green-soft: #e1e9df;
+  --nc-amber: #855b22;
+  --nc-amber-soft: #f2e6ce;
+  --nc-blue: #46667d;
+
+  /* ★ 파생: 앱은 텍스트 4단계(ink~ink-4), 시안은 2단계 → 최옅은 단계 신설
+        sheet 대비 3.24:1. 구분자·화살표 등 장식 전용, 본문 텍스트 금지 */
+  --nc-faint: #8c8880;
+  /* ★ 파생: hover·강조 테두리용 진한 구분선 (rule 60% + ink 40%) */
+  --nc-rule-strong: #8c877e;
+  /* ★ 파생: ink 배경 위 글자색. 기존 '#fff' 하드코딩 대체용
+        (다크모드에서 #fff on ink = 1.24:1로 판독 불가) */
+  --nc-on-ink: #f8f5ef;
+
+  --nc-space-1: 4px;
+  --nc-space-2: 8px;
+  --nc-space-3: 12px;
+  --nc-space-4: 16px;
+  --nc-space-6: 24px;
+  --nc-space-8: 32px;
+  --nc-space-12: 48px;
+  --nc-space-16: 64px;
+  --nc-radius: 3px;
+  --nc-content: 1200px;
+  --nc-reading: 760px;
+
+  /* 2단계(서체)에서 활성화 — 지금은 정의하지 않음
+  --nc-display: "Source Serif 4", Georgia, serif;
+  --nc-body: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+  --nc-meta: "IBM Plex Mono", monospace;
+  */
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --nc-paper: #25231f;
+  --nc-sheet: #302c26;
+  --nc-ink: #eee6d6;
+  --nc-muted: #b7ae9e;
+  --nc-rust: #ed9671;
+  --nc-rust-soft: #492f25;
+  --nc-rule: #62594d;
+  --nc-green: #a3c2a7;
+  --nc-green-soft: #293c2c;
+  --nc-amber: #e0bc7c;
+  --nc-amber-soft: #423523;
+  --nc-blue: #a5bdce;
+
+  --nc-faint: #817a6e;        /* sheet 대비 3.26:1 */
+  --nc-rule-strong: #9a9184;
+  --nc-on-ink: #302c26;
+}
+
+/* OS 다크 선호 대응 — 기본 비활성
+   기존 globals.css에 @media (prefers-color-scheme: dark)가 이미 있을 때만
+   주석을 풀어라. 없는데 켜면 OS 다크 사용자에게 아직 정리 안 된
+   다크 화면이 갑자기 노출된다. (지시문 A-2 판정 결과에 따름)
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --nc-paper: #25231f;  --nc-sheet: #302c26;  --nc-ink: #eee6d6;
+    --nc-muted: #b7ae9e;  --nc-rust: #ed9671;   --nc-rust-soft: #492f25;
+    --nc-rule: #62594d;   --nc-green: #a3c2a7;  --nc-green-soft: #293c2c;
+    --nc-amber: #e0bc7c;  --nc-amber-soft: #423523; --nc-blue: #a5bdce;
+    --nc-faint: #817a6e;  --nc-rule-strong: #9a9184; --nc-on-ink: #302c26;
+  }
+}
+*/
+
+
+/* --------------------------------------------------------------------------
+   2. 앱 변수 → nc 토큰 연결
+      ⚠ :root 하나에만 두지 말 것.
+        커스텀 속성은 "선언된 요소에서" var()가 계산된 뒤 상속된다.
+        data-theme가 <html>이 아닌 래퍼(<body>, <div>)에 붙으면
+        :root에서 이미 라이트 값으로 굳은 --ink가 그대로 상속되어
+        다크 전환이 일부만 먹는다. 테마 요소에서도 다시 선언해 재계산시킨다.
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme] {
+  /* 표면 */
+  --bg:          var(--nc-paper);
+  --bg-elev:     var(--nc-sheet);
+  --bg-sunken:   var(--nc-paper);
+
+  /* 텍스트 4단계 */
+  --ink:         var(--nc-ink);
+  --ink-2:       var(--nc-ink);
+  --ink-3:       var(--nc-muted);
+  --ink-4:       var(--nc-faint);
+  --on-ink:      var(--nc-on-ink);
+
+  /* 구분선 */
+  --line:        var(--nc-rule);
+  --line-strong: var(--nc-rule-strong);
+
+  /* 브랜드 강조 — 러스트는 상승·수익을 뜻하지 않음 (DESIGN-SPEC §4) */
+  --accent:      var(--nc-rust);
+  --accent-soft: var(--nc-rust-soft);
+  --accent-ink:  var(--nc-rust);
+
+  /* 등락 방향 (grep: --pos 11회, --neg 4회)
+     DESIGN-SPEC §4: 등락은 색 단독 금지 — 상승/하락 텍스트·+/- 수치 병기.
+     ⚠ --neg와 --accent가 둘 다 rust가 된다. 같은 화면에서 Base(--accent)와
+       Bear(--neg)를 나란히 쓰는 forecasting/[slug] 시나리오 블록은
+       1단계에서 함께 수정해야 구분이 사라지지 않는다 (지시문 B-6). */
+  --pos:         var(--nc-green);
+  --neg:         var(--nc-rust);
+
+  /* 기본 반경 (grep: --r 1회) */
+  --r:           var(--nc-radius);
+
+  /* 고정 헤더 반투명 배경 — TerminalShell 하드코딩 rgba(250,250,247,.88) 대체 */
+  --header-glass: color-mix(in srgb, var(--nc-paper) 88%, transparent);
+
+  /* 시그널 티어 — 시안 배정 그대로 (styles.css .badge / .p1 / .p2)
+     P0 Most Played 진입 = rust, P1 긍정 리뷰 = amber, P2 Wish List = green
+     색은 우선순위 구분이며 수익 전망이 아님. 텍스트 라벨 병기 유지 필수 */
+  --p0:          var(--nc-rust);
+  --p0-soft:     var(--nc-rust-soft);
+  --p1:          var(--nc-amber);
+  --p1-soft:     var(--nc-amber-soft);
+  --p2:          var(--nc-green);
+  --p2-soft:     var(--nc-green-soft);
+
+  /* 그림자 없음 — 경계는 1px rule로 (DESIGN-SPEC §4 공간과 형태) */
+  --shadow-sm:   none;
+
+  /* --t-mono 및 기타 서체 변수: 의도적으로 미변경 (2단계) */
+}
+
+
+/* --------------------------------------------------------------------------
+   3. 페이지 바탕
+      body 배경이 기존 CSS에서 하드코딩돼 있으면 이 규칙이 필요하다.
+      기존에 var(--bg)를 쓰고 있다면 이 블록은 생략해도 된다.
+   -------------------------------------------------------------------------- */
+html,
+body {
+  background: var(--nc-paper);
+  color: var(--nc-ink);
+}
+
+
+/* ==========================================================================
+   CSS로 해결 불가한 하드코딩 값과 1단계 동반 수정 목록은
+   STAGE1-HANDOFF.md 의 B절(필수 동반 수정)·D절(이후 단계) 참조.
+   ========================================================================== */

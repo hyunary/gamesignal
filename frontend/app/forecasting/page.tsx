@@ -42,7 +42,7 @@ export default async function ForecastingPage() {
                   <span style={{
                     fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 600,
                     color: s.suggestion_type === 'new_forecast' ? 'var(--accent-ink)' : 'var(--p1)',
-                    background: 'rgba(0,0,0,0.06)', padding: '2px 7px', borderRadius: 4, flexShrink: 0,
+                    background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 4, flexShrink: 0,
                     letterSpacing: '.08em',
                   }}>
                     {s.suggestion_type === 'new_forecast' ? 'NEW' : 'UPDATE'}
@@ -105,7 +105,7 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
           <span style={{
             fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 600, letterSpacing: '.1em',
             padding: '4px 10px', borderRadius: 999,
-            background: f.status === 'active' ? 'rgba(31,122,58,0.1)' : 'var(--bg-sunken)',
+            background: f.status === 'active' ? 'var(--nc-green-soft)' : 'var(--bg-sunken)',
             color: f.status === 'active' ? 'var(--pos)' : 'var(--ink-3)',
             display: 'inline-flex', alignItems: 'center', gap: 6,
           }}>

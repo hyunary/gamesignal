@@ -24,7 +24,7 @@ export default function TerminalShell({
       {/* ── Sticky Nav ───────────────────────────────────────────── */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 20,
-        background: 'rgba(250,250,247,0.88)',
+        background: 'var(--header-glass)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--line)',
@@ -79,7 +79,7 @@ export default function TerminalShell({
               Live · {timeStr} KST
             </span>
             <div style={{
-              width: 28, height: 28, borderRadius: '50%', background: 'var(--ink)', color: '#fff',
+              width: 28, height: 28, borderRadius: '50%', background: 'var(--ink)', color: 'var(--on-ink)',
               fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}>
               GS

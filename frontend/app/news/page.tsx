@@ -92,7 +92,7 @@ export default async function NewsPage({
                   </p>
                   {featured.analyst_comment && (
                     <div style={{
-                      background: '#FFFBEB',
+                      background: 'var(--nc-amber-soft)',
                       borderLeft: '3px solid #F59E0B',
                       borderRadius: '0 6px 6px 0',
                       padding: '12px 14px',
@@ -100,7 +100,7 @@ export default async function NewsPage({
                     }}>
                       <div style={{
                         fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 700,
-                        letterSpacing: '.1em', color: '#D97706', marginBottom: 6,
+                        letterSpacing: '.1em', color: 'var(--nc-amber)', marginBottom: 6,
                       }}>
                         📊 ANALYST VIEW
                       </div>
@@ -246,7 +246,7 @@ function StoryRow({ clip, idx }: { clip: NewsClip; idx: number }) {
         </p>
         {clip.analyst_comment && (
           <div style={{
-            background: '#FFFBEB',
+            background: 'var(--nc-amber-soft)',
             borderLeft: '3px solid #F59E0B',
             borderRadius: '0 6px 6px 0',
             padding: '10px 12px',
@@ -254,7 +254,7 @@ function StoryRow({ clip, idx }: { clip: NewsClip; idx: number }) {
           }}>
             <div style={{
               fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 700,
-              letterSpacing: '.1em', color: '#D97706', marginBottom: 5,
+              letterSpacing: '.1em', color: 'var(--nc-amber)', marginBottom: 5,
             }}>
               📊 ANALYST VIEW
             </div>

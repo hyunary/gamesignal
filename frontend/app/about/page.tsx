@@ -205,7 +205,7 @@ export default async function AboutPage() {
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link href="/dashboard" style={{
-              padding: '12px 22px', background: 'var(--ink)', color: '#fff',
+              padding: '12px 22px', background: 'var(--ink)', color: 'var(--on-ink)',
               borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: 'none',
               display: 'inline-block',
             }}>
