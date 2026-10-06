@@ -73,7 +73,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .gs-h1 {
   font-size: 56px; line-height: 1.0; letter-spacing: -0.035em;
-  font-weight: 500; margin: 0 0 16px;
+  font-family: var(--nc-display); font-weight: 400; margin: 0 0 16px;
 }
 .gs-deck {
   font-size: 17px; line-height: 1.5; color: var(--ink-2);
@@ -101,6 +101,29 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   width: 5px; height: 5px;
   border-radius: 50%; background: var(--ink-4);
 }
+
+/* ============================================================
+   Wordmark (NoiseCatcher header brand)
+   ============================================================ */
+.nc-wordmark {
+  font: 500 29px/1.2 var(--nc-display);
+  letter-spacing: -1.4px;
+  white-space: nowrap;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.nc-wordmark__catch { position: relative; }
+.nc-wordmark__catch::after {
+  content: "";
+  position: absolute;
+  left: 1px; right: 0; bottom: -4px;
+  height: 2px;
+  background: var(--nc-rust);
+  transform: rotate(-2deg);
+}
+@media (max-width: 700px) { .nc-wordmark { font-size: 25px; } }
 
 /* ============================================================
    Pulse animation
@@ -195,11 +218,10 @@ body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
   --nc-content: 1200px;
   --nc-reading: 760px;
 
-  /* 2단계(서체)에서 활성화 — 지금은 정의하지 않음
-  --nc-display: "Source Serif 4", Georgia, serif;
-  --nc-body: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
-  --nc-meta: "IBM Plex Mono", monospace;
-  */
+  /* 서체 토큰 (2단계 활성화) */
+  --nc-display: var(--font-nc-serif), Georgia, serif;
+  --nc-body:    var(--font-nc-sans), "Apple SD Gothic Neo", sans-serif;
+  --nc-meta:    var(--font-mono);
 }
 
 [data-theme="dark"] {
@@ -299,8 +321,11 @@ body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
   /* 그림자 없음 — 경계는 1px rule로 (DESIGN-SPEC §4 공간과 형태) */
   --shadow-sm:   none;
 
-  /* --t-mono 및 기타 서체 변수: 의도적으로 미변경 (2단계) */
+  /* 서체 역할 토큰 연결 (2단계) */
+  --t-sans: var(--nc-body);
+  --t-mono: var(--nc-meta);
 }
+
 
 
 /* --------------------------------------------------------------------------
@@ -312,6 +337,7 @@ html,
 body {
   background: var(--nc-paper);
   color: var(--nc-ink);
+  font-family: var(--nc-body);
 }
 
 
