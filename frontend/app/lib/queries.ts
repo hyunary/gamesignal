@@ -406,7 +406,6 @@ export async function getSignalCounts(
       COUNT(*) FILTER (WHERE priority = 'P2')::int AS p2
     FROM signals
     WHERE signal_date BETWEEN $1 AND $2
-      AND signal_type != 'composite'
   `, [dateFrom, dateTo]);
   return rows[0];
 }

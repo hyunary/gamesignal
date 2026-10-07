@@ -119,26 +119,78 @@ const fmt  = (n: number) => new Intl.NumberFormat('en-US').format(Math.round(n))
 const fmtK = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K' : String(Math.round(n));
 
 // ─── Sparkline ───────────────────────────────────────────────────────────────
+// 가로축: signal_date 기준 7칸(slot 0~6). 날짜 간격이 실제 일수에 비례.
+// 빈 날(gap > 1 slot)은 선을 잇지 않고 끊는다. 각 점에 dot 표시.
 
-function Sparkline({ data, stroke = 'var(--accent)', fill = 'transparent', height = 28, strokeWidth = 1.5 }: {
-  data: number[]; stroke?: string; fill?: string; height?: number; strokeWidth?: number;
+function Sparkline({
+  data,
+  endDate,
+  stroke = 'var(--accent)',
+  fill = 'transparent',
+  height = 28,
+  strokeWidth = 1.5,
+}: {
+  data: { date: string; ccu: number }[];
+  endDate: string;
+  stroke?: string;
+  fill?: string;
+  height?: number;
+  strokeWidth?: number;
 }) {
   if (!data?.length) return null;
+
   const W = 100, H = 28;
-  const min = Math.min(...data), max = Math.max(...data);
-  const range = max - min || 1;
-  const step = W / (data.length - 1);
-  const pts = data.map((d, i) => [i * step, H - ((d - min) / range) * H] as [number, number]);
-  const path = pts.reduce((acc, [x, y], i) => {
-    if (i === 0) return `M ${x} ${y}`;
-    const [px, py] = pts[i - 1];
-    const cx = (px + x) / 2;
-    return acc + ` C ${cx} ${py}, ${cx} ${y}, ${x} ${y}`;
-  }, '');
+
+  const [ey, em, ed] = endDate.split('-').map(Number);
+  const endMs = new Date(ey, em - 1, ed).getTime();
+
+  // Map each data point to slot 0-6 (slot 6 = endDate, slot 0 = endDate-6)
+  const pts = data
+    .map(d => {
+      const [dy, dm, dd] = d.date.split('-').map(Number);
+      const slot = Math.round((new Date(dy, dm - 1, dd).getTime() - endMs) / 86400000) + 6;
+      return { slot, ccu: d.ccu };
+    })
+    .filter(p => p.slot >= 0 && p.slot <= 6)
+    .sort((a, b) => a.slot - b.slot);
+
+  if (pts.length < 1) return null;
+
+  const minCCU = Math.min(...pts.map(p => p.ccu));
+  const maxCCU = Math.max(...pts.map(p => p.ccu));
+  const ccuRange = maxCCU - minCCU || 1;
+
+  const toX = (slot: number) => (slot / 6) * W;
+  const toY = (ccu: number) => H - ((ccu - minCCU) / ccuRange) * H;
+
+  // Build path: connect consecutive slots (gap==1) with cubic bezier; break on gap>1
+  let linePath = '';
+  for (let i = 0; i < pts.length; i++) {
+    const x = toX(pts[i].slot);
+    const y = toY(pts[i].ccu);
+    if (i === 0 || pts[i].slot - pts[i - 1].slot > 1) {
+      linePath += `${linePath ? ' ' : ''}M ${x.toFixed(2)} ${y.toFixed(2)}`;
+    } else {
+      const px = toX(pts[i - 1].slot);
+      const py = toY(pts[i - 1].ccu);
+      const cx = (px + x) / 2;
+      linePath += ` C ${cx.toFixed(2)} ${py.toFixed(2)}, ${cx.toFixed(2)} ${y.toFixed(2)}, ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }
+  }
+
+  // Fill only when no gaps (broken path can't be cleanly filled)
+  const hasGaps = pts.some((p, i) => i > 0 && p.slot - pts[i - 1].slot > 1);
+  const fillPath = !hasGaps && pts.length >= 2 && fill !== 'transparent'
+    ? `${linePath} L ${toX(pts[pts.length - 1].slot).toFixed(2)} ${H} L ${toX(pts[0].slot).toFixed(2)} ${H} Z`
+    : '';
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height, display: 'block', width: '100%' }}>
-      {fill !== 'transparent' && <path d={path + ` L ${W} ${H} L 0 ${H} Z`} fill={fill} />}
-      <path d={path} stroke={stroke} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      {fillPath && <path d={fillPath} fill={fill} />}
+      <path d={linePath} stroke={stroke} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      {pts.map((p, i) => (
+        <circle key={i} cx={toX(p.slot)} cy={toY(p.ccu)} r={1.5} fill={stroke} vectorEffect="non-scaling-stroke" />
+      ))}
     </svg>
   );
 }
@@ -239,7 +291,7 @@ function SignalCard({ signal, ccuPoints }: { signal: Signal; ccuPoints: { date: 
             7일 추이 · 06:00 수집 기준
           </div>
           {hasTrend ? (
-            <Sparkline data={trend.map(p => p.ccu)} stroke="var(--accent)" fill="var(--accent-soft)" height={44} strokeWidth={1.75} />
+            <Sparkline data={trend} endDate={signal.signal_date} stroke="var(--accent)" fill="var(--accent-soft)" height={44} strokeWidth={1.75} />
           ) : (
             <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-4)', letterSpacing: '.06em', height: 44, display: 'flex', alignItems: 'center' }}>
               추이 데이터 부족
@@ -409,8 +461,8 @@ export default function TerminalDashboard({
             <div style={{ flex: 1 }} />
             <span style={{ fontFamily: 'var(--t-mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '.08em' }}>
               {filtered.length < totalCount
-                ? `${totalCount}건 중 ${filtered.length}건 표시`
-                : `${filtered.length}건`}
+                ? `${totalCount} signals 중 ${filtered.length} 표시`
+                : `${filtered.length} signals`}
             </span>
           </div>
 
