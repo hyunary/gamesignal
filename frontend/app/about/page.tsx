@@ -146,7 +146,7 @@ export default async function AboutPage() {
           <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
             How the data flows.
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
             {[
               { name: 'SIGNAL_ENGINE',   detail: 'GitHub Actions · 매일 KST 06:00 자동 수집', status: 'LIVE' },
               { name: 'NEWS_CLIPPER',    detail: 'Inven scraper + Claude AI analysis',          status: 'DAILY' },
@@ -154,7 +154,7 @@ export default async function AboutPage() {
               { name: 'FORECAST_ENGINE', detail: 'Game Sales Predictor v1.1',                    status: 'MANUAL' },
             ].map(p => (
               <div key={p.name} style={{ background: 'var(--bg-elev)', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pos)', flexShrink: 0, boxShadow: '0 0 5px var(--pos)' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pos)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--t-mono)', fontSize: 12, fontWeight: 500 }}>{p.name}</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 3 }}>{p.detail}</div>

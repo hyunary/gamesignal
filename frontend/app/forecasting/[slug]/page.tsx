@@ -8,7 +8,7 @@ export const revalidate = 0;
 const MILESTONE_CONFIG: Record<string, { icon: string; accent: string }> = {
   initial:         { icon: '📋', accent: 'var(--accent)' },
   wishlist_signal: { icon: '⭐', accent: 'var(--p1)' },
-  metacritic:      { icon: '🎯', accent: '#7C3AED' },
+  metacritic:      { icon: '🎯', accent: 'var(--nc-blue)' },
   launch_week:     { icon: '🚀', accent: 'var(--pos)' },
   launch_month:    { icon: '📊', accent: 'var(--p2)' },
   update:          { icon: '🔄', accent: 'var(--line-strong)' },
@@ -40,7 +40,7 @@ export default async function ForecastDetailPage({
         {/* ── Game header card ────────────────────────────── */}
         <div style={{
           background: 'var(--bg-elev)', border: '1px solid var(--line)',
-          borderRadius: 8, padding: '20px', marginBottom: 16,
+          borderRadius: 'var(--r)', padding: '20px', marginBottom: 16,
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -79,7 +79,7 @@ export default async function ForecastDetailPage({
                   flexShrink: 0, fontFamily: 'var(--t-mono)', fontSize: 11,
                   color: 'var(--accent)', textDecoration: 'none',
                   padding: '4px 10px', border: '1px solid var(--accent)',
-                  borderRadius: 5,
+                  borderRadius: 'var(--r)',
                 }}>
                 Steam ↗
               </a>
@@ -102,7 +102,7 @@ export default async function ForecastDetailPage({
               ].map(s => (
                 <div key={s.label} style={{
                   background: s.bg, border: `1px solid ${s.border}`,
-                  borderRadius: 6, padding: '12px', textAlign: 'center',
+                  borderRadius: 'var(--r)', padding: '12px', textAlign: 'center',
                 }}>
                   <div style={{ fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-4)', letterSpacing: '.1em', marginBottom: 6 }}>
                     {s.label}
@@ -121,7 +121,7 @@ export default async function ForecastDetailPage({
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Analysis Thread</span>
           <span style={{
             fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
-            background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 999,
+            background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 0,
           }}>
             {threads.length} updates
           </span>
@@ -130,7 +130,7 @@ export default async function ForecastDetailPage({
         {threads.length === 0 ? (
           <div style={{
             padding: '40px 24px', textAlign: 'center',
-            background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 8,
+            background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 'var(--r)',
           }}>
             <p style={{ fontFamily: 'var(--t-mono)', fontSize: 12, color: 'var(--ink-4)' }}>
               NO UPDATES YET
@@ -179,7 +179,7 @@ function ThreadCard({ thread }: { thread: ForecastThread }) {
       <div style={{
         background: 'var(--bg-elev)', border: '1px solid var(--line)',
         borderLeft: `3px solid ${cfg.accent}`,
-        borderRadius: '0 8px 8px 0',
+        borderRadius: 0,
         padding: '14px 16px',
       }}>
         {/* Header */}

@@ -1,4 +1,5 @@
 import { getTodaySignals, getRecentSignals, getPipelineStatus, getTopGames, getSignalHistory } from '../lib/queries';
+import { computePipelineInfo } from '../lib/pipeline';
 import TerminalDashboard from '../components/TerminalDashboard';
 import TerminalShell from '../components/TerminalShell';
 
@@ -16,8 +17,8 @@ export default async function Home() {
   const allSignals = todaySignals.length > 0 ? todaySignals : recentSignals;
   const isToday = todaySignals.length > 0;
 
-  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  const timestamp = kstNow.toISOString().replace('T', ' ').slice(0, 16) + ' KST';
+  const pipelineInfo = computePipelineInfo(pipelineStatus);
+  const pipelineLabel = pipelineInfo.status === 'unavailable' ? '—' : pipelineInfo.lastRun;
 
   const successCount = pipelineStatus.filter((p: any) => p.status === 'success').length;
   const pipeline = `${successCount}/${pipelineStatus.length}`;
@@ -29,7 +30,7 @@ export default async function Home() {
         topGames={topGames}
         pipelineStatus={pipelineStatus}
         signalHistory={signalHistory}
-        timestamp={timestamp}
+        pipelineLabel={pipelineLabel}
         pipeline={pipeline}
         isToday={isToday}
       />

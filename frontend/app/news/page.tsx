@@ -1,5 +1,6 @@
 import { getNewsByDate, getNewsDateList, NewsClip } from '../lib/queries';
 import TerminalShell from '../components/TerminalShell';
+import PageHeading from '../components/PageHeading';
 import Link from 'next/link';
 
 export const revalidate = 0;
@@ -40,14 +41,13 @@ export default async function NewsPage({
       <div className="gs-page">
 
         {/* ── Page header ─────────────────────────────────────────── */}
-        <header style={{ marginBottom: 36 }}>
-          <span className="gs-eyebrow">02 — EDITORIAL</span>
-          <h1 className="gs-h1">What moved the market today.</h1>
-          <p className="gs-deck">
-            Steam 생태계의 주요 사건을 애널리스트 관점에서 큐레이션합니다.
-            {clips.length > 0 && ` ${displayDate} · 총 ${clips.length}건.`}
-          </p>
-        </header>
+        <PageHeading
+          eyebrow="02 — EDITORIAL"
+          title="What matters today."
+          description={`Steam 생태계의 주요 사건을 애널리스트 관점에서 큐레이션합니다.${clips.length > 0 ? ` 총 ${clips.length}건.` : ''}`}
+          timeLabel="발행일"
+          timeValue={displayDate}
+        />
 
         {clips.length === 0 ? (
           <div style={{
