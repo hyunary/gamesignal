@@ -24,8 +24,8 @@ const PRINCIPLES = [
 ];
 
 const TIMELINE = [
-  { year: '2026.05', label: 'PROTOTYPE', body: 'Steam 신호 감지 알고리즘 초기 버전 개발. GitHub Actions 기반 자동화 파이프라인 구축.' },
-  { year: '2026.06', label: 'MVP',       body: '뉴스 클리핑·판매량 예측 기능 추가. Supabase Edge Function 연동. 서비스 런칭.' },
+  { year: '2026.03', label: 'PROTOTYPE', body: 'Steam 신호 감지 알고리즘 초기 버전 개발. GitHub Actions 기반 자동화 파이프라인 구축.' },
+  { year: '2026.04', label: 'MVP',       body: '뉴스 클리핑·판매량 예측 기능 추가. Supabase Edge Function 연동. 서비스 런칭.' },
   { year: 'NOW',     label: 'PLATFORM',  body: '에디토리얼 UI 리뉴얼. 오케스트레이터 자동 예측 제안 시스템 도입.' },
 ];
 
