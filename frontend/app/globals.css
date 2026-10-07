@@ -543,3 +543,15 @@ body {
 .nc-analyst-details > summary { list-style: none; cursor: pointer; font-family: var(--t-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--accent); }
 .nc-analyst-details > summary::-webkit-details-marker { display: none; }
 .nc-analyst-details > summary::marker { display: none; }
+
+/* Dashboard 3E */
+.nc-dash-grid { display: grid; grid-template-columns: 1fr 290px; gap: 38px; align-items: start; }
+@media (max-width: 800px) { .nc-dash-grid { grid-template-columns: 1fr; } }
+
+.nc-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 600px) {
+  .nc-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .nc-kpi-cell-2 { border-right: none !important; }
+  .nc-kpi-cell-3 { border-top: 1px solid var(--line); }
+  .nc-kpi-cell-4 { border-top: 1px solid var(--line); }
+}

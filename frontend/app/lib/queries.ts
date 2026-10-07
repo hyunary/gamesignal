@@ -376,3 +376,37 @@ export async function getTopGames() {
   `);
   return rows;
 }
+
+export async function getCCUHistory(
+  appIds: number[],
+  minSignalDate: string,
+  maxSignalDate: string
+): Promise<{ app_id: number; date: string; ccu: number }[]> {
+  if (appIds.length === 0) return [];
+  const { rows } = await pool.query(`
+    SELECT app_id, snapshot_date::text AS date, concurrent_users AS ccu
+    FROM game_snapshots
+    WHERE app_id = ANY($1)
+      AND snapshot_date BETWEEN $2::date - 6 AND $3::date
+      AND concurrent_users IS NOT NULL
+    ORDER BY app_id, snapshot_date ASC
+  `, [appIds, minSignalDate, maxSignalDate]);
+  return rows.map((r: any) => ({ app_id: r.app_id, date: r.date, ccu: r.ccu }));
+}
+
+export async function getSignalCounts(
+  dateFrom: string,
+  dateTo: string
+): Promise<{ total: number; p0: number; p1: number; p2: number }> {
+  const { rows } = await pool.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE priority = 'P0')::int AS p0,
+      COUNT(*) FILTER (WHERE priority = 'P1')::int AS p1,
+      COUNT(*) FILTER (WHERE priority = 'P2')::int AS p2
+    FROM signals
+    WHERE signal_date BETWEEN $1 AND $2
+      AND signal_type != 'composite'
+  `, [dateFrom, dateTo]);
+  return rows[0];
+}
