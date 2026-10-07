@@ -25,11 +25,26 @@ export default async function ForecastingPage() {
           description={`단일 숫자 대신, 가정이 다른 세 가지 판매량 시나리오를 비교합니다. 현재 ${forecasts.length}개 타이틀 추적 중.`}
         />
 
-        {/* ── Orchestrator suggestions ────────────────────────────── */}
+        {/* ── Research Inbox (orchestrator suggestions) ────────────── */}
         {suggestions.length > 0 && (
-          <div style={{ marginBottom: 32 }}>
-            <span className="gs-section-label">ORCHESTRATOR SUGGESTIONS</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+          <details className="nc-inbox-details" style={{ marginBottom: 32 }}>
+            <summary style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px',
+              background: 'var(--bg-elev)', border: '1px solid var(--line)',
+              borderRadius: 'var(--r)', cursor: 'pointer', listStyle: 'none',
+              marginBottom: 0,
+            }}>
+              <span className="nc-inbox-icon" style={{ fontSize: 12, color: 'var(--ink-3)' }}>+</span>
+              <span className="gs-section-label" style={{ margin: 0 }}>RESEARCH INBOX</span>
+              <span style={{
+                fontFamily: 'var(--t-mono)', fontSize: 10, color: 'var(--ink-3)',
+                background: 'var(--bg-sunken)', padding: '2px 8px', borderRadius: 999,
+              }}>
+                {suggestions.length}건
+              </span>
+            </summary>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
               {suggestions.map((s: ForecastSuggestion) => (
                 <div key={s.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
@@ -56,10 +71,11 @@ export default async function ForecastingPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         )}
 
         {/* ── Forecast cards ──────────────────────────────────────── */}
+        <span className="gs-section-label">COVERAGE NOTEBOOK</span>
         {forecasts.length === 0 ? (
           <div style={{
             padding: '56px 0', textAlign: 'center',
@@ -90,9 +106,9 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
   const barPct = (v: number | null) => v ? Math.round((v / maxBull) * 100) : 0;
 
   const scenarios = [
-    { key: 'bull', label: 'BULL', value: f.bull_max  ? `${f.bull_max}만+`  : '—', raw: f.bull_max,  color: 'var(--pos)', bg: 'transparent' },
-    { key: 'base', label: 'BASE', value: f.base_min && f.base_max ? `${f.base_min}~${f.base_max}만` : '—', raw: f.base_max, color: 'var(--ink)', bg: 'var(--bg-sunken)' },
-    { key: 'bear', label: 'BEAR', value: f.bear_min  ? `${f.bear_min}만~`  : '—', raw: f.bear_min,  color: 'var(--neg)', bg: 'transparent' },
+    { key: 'bear', label: 'BEAR', value: f.bear_min  ? `${f.bear_min}만~`  : '—', raw: f.bear_min,  color: 'var(--ink-2)', bg: 'transparent' },
+    { key: 'base', label: 'BASE', value: f.base_min && f.base_max ? `${f.base_min}~${f.base_max}만` : '—', raw: f.base_max, color: 'var(--accent)', bg: 'var(--accent-soft)' },
+    { key: 'bull', label: 'BULL', value: f.bull_max  ? `${f.bull_max}만+`  : '—', raw: f.bull_max,  color: 'var(--ink-2)', bg: 'transparent' },
   ];
 
   return (
