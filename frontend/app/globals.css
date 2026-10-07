@@ -31,7 +31,6 @@
   --pos: #1F7A3A;
   --neg: #B02A37;
 
-  --t-sans: var(--font-sans, 'Inter Tight'), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   --t-mono: var(--font-mono, 'IBM Plex Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --r-sm: 6px;
