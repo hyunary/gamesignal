@@ -47,6 +47,7 @@ async function fetchAppDetails(appId) {
 async function updateGameDetails(details) {
   await pool.query(`
     UPDATE games SET
+      title           = CASE WHEN title LIKE 'Game\\_%' AND $14::text IS NOT NULL AND $14::text <> '' THEN $14::text ELSE title END,
       developer       = $2,
       publisher       = $3,
       release_date    = $4,
@@ -75,6 +76,7 @@ async function updateGameDetails(details) {
     details.isSoftware,
     details.headerImageUrl,
     details.trailerSteamUrl,
+    details.title ?? null,
   ]);
 }
 // 신규 App ID만 수집 (기존 게임은 월요일에만 갱신)
@@ -89,9 +91,9 @@ async function collectAppDetails() {
     console.log('📅 월요일 — 전체 게임 상세 정보 갱신');
     query = `SELECT app_id, title FROM games ORDER BY app_id`;
   } else {
-    // 평일: developer가 없는 신규 게임만
+    // 평일: developer가 없는 신규 게임 + 임시 이름(Game_{appid}) 게임
     console.log('📅 평일 — 신규 게임만 상세 정보 수집');
-    query = `SELECT app_id, title FROM games WHERE developer IS NULL ORDER BY app_id`;
+    query = `SELECT app_id, title FROM games WHERE developer IS NULL OR title LIKE 'Game\\_%' ORDER BY app_id`;
   }
   const { rows: targets } = await pool.query(query);
   console.log(`📋 수집 대상: ${targets.length}개 게임`);
