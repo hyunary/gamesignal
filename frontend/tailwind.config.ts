@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        nav: '701px',
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",

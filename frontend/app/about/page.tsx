@@ -52,7 +52,7 @@ export default async function AboutPage() {
         {/* ── Hero ────────────────────────────────────────────────── */}
         <header style={{ marginBottom: 64, maxWidth: 900 }}>
           <span className="gs-eyebrow">04 — ABOUT</span>
-          <h1 style={{ fontSize: 64, lineHeight: 0.95, letterSpacing: '-0.04em', fontWeight: 500, margin: '0 0 24px' }}>
+          <h1 style={{ fontSize: 64, lineHeight: 0.95, letterSpacing: '-0.04em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '0 0 24px' }}>
             Noise in. Signal out.
           </h1>
           <p style={{ fontSize: 19, lineHeight: 1.5, color: 'var(--ink-2)', maxWidth: 720 }}>
@@ -88,7 +88,7 @@ export default async function AboutPage() {
         {/* ── Principles ──────────────────────────────────────────── */}
         <section style={{ marginBottom: 72 }}>
           <span className="gs-section-label">PRINCIPLES</span>
-          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '4px 0 32px' }}>
             How we think about the problem.
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
@@ -114,7 +114,7 @@ export default async function AboutPage() {
         <section style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 64, alignItems: 'start', marginBottom: 72 }}>
           <div>
             <span className="gs-section-label">TIMELINE</span>
-            <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 16px' }}>
+            <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '4px 0 16px' }}>
               From prototype<br />to platform.
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
@@ -143,10 +143,10 @@ export default async function AboutPage() {
         {/* ── Pipeline ────────────────────────────────────────────── */}
         <section style={{ marginBottom: 72 }}>
           <span className="gs-section-label">PIPELINE</span>
-          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '4px 0 32px' }}>
             How the data flows.
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
             {[
               { name: 'SIGNAL_ENGINE',   detail: 'GitHub Actions · 매일 KST 06:00 자동 수집', status: 'LIVE' },
               { name: 'NEWS_CLIPPER',    detail: 'Inven scraper + Claude AI analysis',          status: 'DAILY' },
@@ -154,7 +154,7 @@ export default async function AboutPage() {
               { name: 'FORECAST_ENGINE', detail: 'Game Sales Predictor v1.1',                    status: 'MANUAL' },
             ].map(p => (
               <div key={p.name} style={{ background: 'var(--bg-elev)', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pos)', flexShrink: 0, boxShadow: '0 0 5px var(--pos)' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--pos)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--t-mono)', fontSize: 12, fontWeight: 500 }}>{p.name}</div>
                   <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 3 }}>{p.detail}</div>
@@ -170,7 +170,7 @@ export default async function AboutPage() {
         {/* ── FAQ ─────────────────────────────────────────────────── */}
         <section style={{ marginBottom: 72 }}>
           <span className="gs-section-label">FAQ</span>
-          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 500, margin: '4px 0 32px' }}>
+          <h2 style={{ fontSize: 36, letterSpacing: '-0.03em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '4px 0 32px' }}>
             Frequently asked.
           </h2>
           <div style={{ maxWidth: 840 }}>
@@ -196,7 +196,7 @@ export default async function AboutPage() {
           marginBottom: stats ? 48 : 0,
         }}>
           <span className="gs-section-label">GET STARTED</span>
-          <h2 style={{ fontSize: 40, letterSpacing: '-0.03em', fontWeight: 500, margin: '6px 0 12px', lineHeight: 1.05 }}>
+          <h2 style={{ fontSize: 40, letterSpacing: '-0.03em', fontWeight: 400, fontFamily: 'var(--nc-display)', margin: '6px 0 12px', lineHeight: 1.05 }}>
             Want the signals, not the noise?
           </h2>
           <p style={{ fontSize: 16, color: 'var(--ink-2)', margin: '0 0 28px', maxWidth: 520, lineHeight: 1.5 }}>

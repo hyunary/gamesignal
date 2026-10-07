@@ -1,5 +1,6 @@
 import { getAllForecasts, getForecastSuggestions, Forecast, ForecastSuggestion } from '../lib/queries';
 import TerminalShell from '../components/TerminalShell';
+import PageHeading from '../components/PageHeading';
 import ForecastRequestBoard from '../components/ForecastRequestBoard';
 import Link from 'next/link';
 
@@ -18,13 +19,11 @@ export default async function ForecastingPage() {
       <div className="gs-page">
 
         {/* ── Page header ─────────────────────────────────────────── */}
-        <header style={{ marginBottom: 40 }}>
-          <span className="gs-eyebrow">03 — FORECAST</span>
-          <h1 className="gs-h1">Upcoming releases, forecast.</h1>
-          <p className="gs-deck">
-            추적 중인 {forecasts.length}개 타이틀의 Year 1 판매량을 Bull / Base / Bear 시나리오로 분석합니다.
-          </p>
-        </header>
+        <PageHeading
+          eyebrow="01 — FORECAST"
+          title="Possible futures."
+          description={`단일 숫자 대신, 가정이 다른 세 가지 판매량 시나리오를 비교합니다. 현재 ${forecasts.length}개 타이틀 추적 중.`}
+        />
 
         {/* ── Orchestrator suggestions ────────────────────────────── */}
         {suggestions.length > 0 && (
@@ -37,12 +36,12 @@ export default async function ForecastingPage() {
                   padding: '12px 16px',
                   background: s.suggestion_type === 'new_forecast' ? 'var(--accent-soft)' : 'var(--p1-soft)',
                   border: `1px solid ${s.suggestion_type === 'new_forecast' ? 'var(--accent)' : 'var(--p1)'}`,
-                  borderRadius: 8,
+                  borderRadius: 'var(--r)',
                 }}>
                   <span style={{
                     fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 600,
                     color: s.suggestion_type === 'new_forecast' ? 'var(--accent-ink)' : 'var(--p1)',
-                    background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 4, flexShrink: 0,
+                    background: 'var(--bg-sunken)', padding: '2px 7px', borderRadius: 'var(--r)', flexShrink: 0,
                     letterSpacing: '.08em',
                   }}>
                     {s.suggestion_type === 'new_forecast' ? 'NEW' : 'UPDATE'}
@@ -64,7 +63,7 @@ export default async function ForecastingPage() {
         {forecasts.length === 0 ? (
           <div style={{
             padding: '56px 0', textAlign: 'center',
-            border: '1px solid var(--line)', borderRadius: 10,
+            border: '1px solid var(--line)', borderRadius: 'var(--r)',
             background: 'var(--bg-elev)',
           }}>
             <p style={{ fontFamily: 'var(--t-mono)', fontSize: 12, color: 'var(--ink-4)', letterSpacing: '.1em' }}>
@@ -104,7 +103,7 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <span style={{
             fontFamily: 'var(--t-mono)', fontSize: 10, fontWeight: 600, letterSpacing: '.1em',
-            padding: '4px 10px', borderRadius: 999,
+            padding: '4px 10px', borderRadius: 0,
             background: f.status === 'active' ? 'var(--nc-green-soft)' : 'var(--bg-sunken)',
             color: f.status === 'active' ? 'var(--pos)' : 'var(--ink-3)',
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -114,12 +113,12 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
           </span>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {f.platform && (
-              <span style={{ fontFamily: 'var(--t-mono)', fontSize: 9.5, padding: '3px 7px', border: '1px solid var(--line)', borderRadius: 3, color: 'var(--ink-2)', letterSpacing: '.06em' }}>
+              <span style={{ fontFamily: 'var(--t-mono)', fontSize: 9.5, padding: '3px 7px', border: '1px solid var(--line)', borderRadius: 'var(--r)', color: 'var(--ink-2)', letterSpacing: '.06em' }}>
                 {f.platform.toUpperCase()}
               </span>
             )}
             {f.game_pass && (
-              <span style={{ fontFamily: 'var(--t-mono)', fontSize: 9.5, padding: '3px 7px', borderRadius: 3, background: '#107C10', color: '#fff', letterSpacing: '.06em' }}>
+              <span style={{ fontFamily: 'var(--t-mono)', fontSize: 9.5, padding: '3px 7px', borderRadius: 'var(--r)', background: 'var(--nc-green-soft)', color: 'var(--nc-green)', letterSpacing: '.06em' }}>
                 GAME PASS
               </span>
             )}
@@ -136,12 +135,12 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
         </div>
 
         {/* Bull / Base / Bear block */}
-        <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '4px 14px', marginBottom: 22, background: 'var(--bg)' }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--r)', padding: '4px 14px', marginBottom: 22, background: 'var(--bg)' }}>
           {scenarios.map(row => (
             <div key={row.key} style={{
               display: 'grid', gridTemplateColumns: '56px 120px 1fr',
               alignItems: 'center', gap: 14,
-              padding: '10px 10px', borderRadius: 4, margin: '2px -8px',
+              padding: '10px 10px', borderRadius: 'var(--r)', margin: '2px -8px',
               background: row.key === 'base' ? row.bg : 'transparent',
             }}>
               <span style={{ fontFamily: 'var(--t-mono)', fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: row.color }}>
@@ -154,9 +153,9 @@ function ForecastCard({ forecast: f, maxBull }: { forecast: Forecast; maxBull: n
               }}>
                 {row.value}
               </span>
-              <div style={{ height: 6, background: 'var(--bg-sunken)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--bg-sunken)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
                 <div style={{
-                  height: '100%', borderRadius: 2,
+                  height: '100%', borderRadius: 'var(--r)',
                   width: `${barPct(row.raw)}%`,
                   background: row.color,
                   opacity: row.key === 'base' ? 1 : 0.55,

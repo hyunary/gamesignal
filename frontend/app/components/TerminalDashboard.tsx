@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import PageHeading from '@/app/components/PageHeading';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ interface Props {
   topGames: TopGame[];
   pipelineStatus: PipelineRun[];
   signalHistory: SignalHistory[];
-  timestamp: string;
+  pipelineLabel: string;
   pipeline: string;
   isToday: boolean;
 }
@@ -215,7 +216,7 @@ function SignalCard({ signal, active, onClick }: { signal: Signal; active: boole
         {signal.is_listed && signal.stock_ticker && (
           <>
             <span style={{ color: 'var(--ink-4)' }}>·</span>
-            <span style={{ color: 'var(--accent-ink)', background: 'var(--accent-soft)', padding: '1px 6px', borderRadius: 3 }}>
+            <span style={{ color: 'var(--accent-ink)', background: 'var(--accent-soft)', padding: '1px 6px', borderRadius: 'var(--r)' }}>
               {signal.stock_ticker}
             </span>
           </>
@@ -261,7 +262,7 @@ function SignalCard({ signal, active, onClick }: { signal: Signal; active: boole
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function TerminalDashboard({ signals, topGames, pipelineStatus, timestamp, isToday }: Props) {
+export default function TerminalDashboard({ signals, topGames, pipelineStatus, pipelineLabel, isToday }: Props) {
   const [tierFilter, setTierFilter] = useState<'ALL' | 'P0' | 'P1' | 'P2'>('ALL');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -283,18 +284,18 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, t
     <div className="gs-page">
 
       {/* ── Page header ───────────────────────────────────────────── */}
-      <header style={{ marginBottom: 36 }}>
-        <span className="gs-eyebrow">01 — LIVE INTELLIGENCE</span>
-        <h1 className="gs-h1">{isToday ? `Today's Noise.` : `Recent Noise.`}</h1>
-        <p className="gs-deck">
-          추적 중인 타이틀에서 발생한 의미 있는 변화. 업데이트 {timestamp}.
-        </p>
-      </header>
+      <PageHeading
+        eyebrow="03 — LIVE INTELLIGENCE"
+        title={isToday ? "Today’s signals." : "Recent signals."}
+        description="추적 중인 타이틀에서 발생한 의미 있는 변화."
+        timeLabel="파이프라인"
+        timeValue={pipelineLabel}
+      />
 
       {/* ── KPI strip ─────────────────────────────────────────────── */}
       <section style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        border: '1px solid var(--line)', borderRadius: 10,
+        border: '1px solid var(--line)', borderRadius: 'var(--r)',
         background: 'var(--bg-elev)', overflow: 'hidden',
         marginBottom: 36,
       }}>
@@ -333,7 +334,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, t
                 key={t}
                 onClick={() => setTierFilter(t)}
                 style={{
-                  fontSize: 13, padding: '8px 14px', borderRadius: 999,
+                  fontSize: 13, padding: '8px 14px', borderRadius: 0,
                   color: tierFilter === t ? 'var(--on-ink)' : 'var(--ink-3)',
                   background: tierFilter === t ? 'var(--ink)' : 'transparent',
                   fontWeight: tierFilter === t ? 500 : 400,
@@ -383,7 +384,7 @@ export default function TerminalDashboard({ signals, topGames, pipelineStatus, t
       <section>
 
         {/* Steam Top 10 */}
-        <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--line)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
           <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)' }}>
             <span className="gs-section-label" style={{ marginBottom: 4 }}>STEAM TOP 10</span>
             <h3 style={{ fontSize: 20, letterSpacing: '-0.02em', fontWeight: 500, margin: 0 }}>Most played now</h3>
