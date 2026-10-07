@@ -25,6 +25,8 @@ const mdComponents: Components = {
   ),
 };
 
+const remarkPlugins = [[remarkGfm, { singleTilde: false }]] as Parameters<typeof ReactMarkdown>[0]['remarkPlugins'];
+
 export default async function ForecastDetailPage({
   params,
 }: {
@@ -324,7 +326,7 @@ function ThreadCard({ thread }: { thread: ForecastThread }) {
         {/* Content — markdown */}
         <div className="nc-md">
           <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
+            remarkPlugins={remarkPlugins}
             components={mdComponents}
           >
             {thread.content}
