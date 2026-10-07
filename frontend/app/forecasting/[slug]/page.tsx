@@ -2,9 +2,7 @@ import { getForecastBySlug, ForecastThread } from '../../lib/queries';
 import TerminalShell from '../../components/TerminalShell';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import type { Components } from 'react-markdown';
+import Markdown from '../../components/Markdown';
 
 export const revalidate = 0;
 
@@ -16,16 +14,6 @@ const MILESTONE_CONFIG: Record<string, { icon: string; accent: string }> = {
   launch_month:    { icon: '📊', accent: 'var(--p2)' },
   update:          { icon: '🔄', accent: 'var(--line-strong)' },
 };
-
-const mdComponents: Components = {
-  table: ({ children }) => (
-    <div className="nc-table-scroll">
-      <table>{children}</table>
-    </div>
-  ),
-};
-
-const remarkPlugins = [[remarkGfm, { singleTilde: false }]] as Parameters<typeof ReactMarkdown>[0]['remarkPlugins'];
 
 export default async function ForecastDetailPage({
   params,
@@ -324,14 +312,7 @@ function ThreadCard({ thread }: { thread: ForecastThread }) {
         </div>
 
         {/* Content — markdown */}
-        <div className="nc-md">
-          <ReactMarkdown
-            remarkPlugins={remarkPlugins}
-            components={mdComponents}
-          >
-            {thread.content}
-          </ReactMarkdown>
-        </div>
+        <Markdown>{thread.content}</Markdown>
       </div>
     </div>
   );
