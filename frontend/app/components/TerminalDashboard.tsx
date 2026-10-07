@@ -356,7 +356,8 @@ export default function TerminalDashboard({
   const signalsMissing = signalCounts === null
     || (isToday && signalCounts.total === 0 && !pipelineSuccessToday);
 
-  const rangeSuffix = isToday ? '' : ' · 최근 7일';
+  const recentStart = subtractDays(today, 7);
+  const rangeSuffix = isToday ? '' : ` · ${recentStart.slice(5)}~${today.slice(5)}`;
 
   const kpis = [
     { label: 'TOP 10 CCU',            value: top10Missing    ? '—' : fmtK(top10CCU),                    sub: top10Missing    ? '데이터 미수신' : '' },
