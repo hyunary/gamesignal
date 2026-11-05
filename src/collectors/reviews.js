@@ -7,8 +7,7 @@ require('dotenv').config();
 // ── 설정 (환경변수로 조정 가능) ──────────────────────────────────────
 // 단계 전체 시간 상한. 초과 시 남은 게임은 건너뛰고 partial로 마감 → 신호 엔진이 반드시 실행되도록
 const BUDGET_MS            = parseInt(process.env.REVIEWS_BUDGET_MS) || 15 * 60 * 1000;
-// 호출 간격. store.steampowered.com은 대략 5분당 200회 수준에서 429가 나기 시작하므로
-// 1초(5분 300회)보다 여유 있게 1.6초(5분 약 187회)로 둔다
+// 호출 간격. 키 없는 Web API 호출은 한도가 낮으므로 1.6초(5분 약 187회) 유지
 const INTERVAL_MS          = parseInt(process.env.REVIEWS_INTERVAL_MS) || 1600;
 // 연속 차단(429/403)이 이 횟수에 도달하면 IP 차단으로 보고 남은 게임 수집 중단
 const MAX_CONSECUTIVE_BLOCKS = parseInt(process.env.REVIEWS_MAX_CONSECUTIVE_BLOCKS) || 5;
@@ -17,19 +16,37 @@ const MAX_ATTEMPTS         = 2;
 const RETRY_BACKOFF_MS     = 2000;
 const REQUEST_TIMEOUT_MS   = 10000;
 
-const REVIEWS_URL = (appId) => `https://store.steampowered.com/appreviews/${appId}`;
-const REVIEWS_PARAMS = { json: 1, purchase_type: 'all', language: 'all', num_per_page: 0 };
+// Steam이 2026-10-22에 store.steampowered.com/appreviews를 폐지
+// (이후 HTTP 200 + 상점 홈 HTML 반환 → 10/23부터 리뷰 0건) → 공식 Web API로 이전. 키 불필요
+const REVIEWS_ENDPOINT = 'https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/';
 
 /**
- * Steam appreviews 응답 판정 (순수 함수 — 테스트 대상)
- * 실패 시 reason 코드로 원인을 구분해 로그/pipeline_runs에 남긴다.
- *   BLOCKED       : 429/403 — 건너뜀, 재시도 안 함
- *   HTTP_5xx      : 서버 오류 — 재시도
- *   HTTP_xxx      : 그 외 비정상 상태 — 재시도 안 함
- *   NON_JSON      : HTML 등 JSON이 아닌 응답 (리다이렉트/에러 페이지/형식 변경 의심)
- *   API_SUCCESS_n : JSON의 success 값이 1이 아님 (앱 없음/비공개 등)
- *   NO_SUMMARY    : query_summary 없음 또는 total_reviews가 숫자가 아님 (응답 형식 변경 의심)
- * 리뷰 0건(신작 등)은 정상으로 본다.
+ * GetAppReviews 요청 입력
+ *  - languages ["all"] : 생략하면 영어 리뷰만 집계됨 (CS2 기준 153만 vs 534만)
+ *  - purchase_type 1   : 전체 (0=Steam 구매, 2=외부 구매). 구 API 'all'과 같은 기준 (CS2 996만 ≈ 10/22 DB 993만)
+ *  - num_per_page 1    : 0은 20으로 취급된다는 보고가 있어 1 사용 (집계값만 필요)
+ */
+function reviewsInput(appId) {
+  return { appid: Number(appId), num_per_page: 1, languages: ['all'], purchase_type: 1 };
+}
+
+// input_json은 JSON.stringify 후 encodeURIComponent로 직접 인코딩
+// (axios params 직렬화는 : , [ ] 를 인코딩하지 않으므로 사용하지 않음)
+function buildReviewsUrl(appId) {
+  return `${REVIEWS_ENDPOINT}?input_json=${encodeURIComponent(JSON.stringify(reviewsInput(appId)))}`;
+}
+
+/**
+ * GetAppReviews 응답 판정 (순수 함수 — 테스트 대상)
+ * 응답: { response: { query_summary: { total_reviews, total_positive, total_negative, ... }, reviews: [...], cursor } }
+ * success 필드가 없으므로 HTTP 상태와 response.query_summary로 판정한다.
+ *   BLOCKED    : 429/403 — 건너뜀, 재시도 안 함
+ *   HTTP_5xx   : 서버 오류 — 재시도
+ *   HTTP_xxx   : 그 외 비정상 상태 — 재시도 안 함
+ *   NON_JSON   : HTML 등 JSON이 아닌 응답 (구 appreviews가 상점 홈 HTML을 돌려주던 경우 포함)
+ *   NO_SUMMARY : response.query_summary 없음, 또는 total_reviews가 숫자가 아님 (형식 변경 의심)
+ * total_positive/negative가 빠져 있으면 0으로 본다 (protobuf JSON은 0인 필드를 생략할 수 있음).
+ * query_summary에 집계 필드가 하나도 없고 reviews도 비어 있으면 리뷰 0건 게임으로 보고 0으로 처리.
  */
 function classifyReviewResponse(appId, status, rawBody) {
   const head = typeof rawBody === 'string' ? rawBody.slice(0, 300) : JSON.stringify(rawBody ?? null).slice(0, 300);
@@ -42,20 +59,26 @@ function classifyReviewResponse(appId, status, rawBody) {
     try { data = JSON.parse(rawBody); }
     catch { return { ok: false, reason: 'NON_JSON', retryable: false, status, head }; }
   }
-  if (!data || typeof data !== 'object') return { ok: false, reason: 'NON_JSON', retryable: false, status, head };
-  if (data.success !== 1) return { ok: false, reason: `API_SUCCESS_${data.success}`, retryable: false, status, head };
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, reason: 'NON_JSON', retryable: false, status, head };
+  }
 
-  const s = data.query_summary;
-  if (!s || typeof s.total_reviews !== 'number') {
+  const resp = data.response;
+  const s = resp && typeof resp === 'object' ? resp.query_summary : null;
+  if (!s || typeof s !== 'object') return { ok: false, reason: 'NO_SUMMARY', retryable: false, status, head };
+
+  const hasCounts = ['total_reviews', 'total_positive', 'total_negative'].some((k) => k in s);
+  const noReviews = !hasCounts && (!Array.isArray(resp.reviews) || resp.reviews.length === 0);
+  if (!noReviews && typeof s.total_reviews !== 'number') {
     return { ok: false, reason: 'NO_SUMMARY', retryable: false, status, head };
   }
   return {
     ok: true,
     reviews: {
       appId,
-      reviewTotal:    s.total_reviews  ?? 0,
-      reviewPositive: s.total_positive ?? 0,
-      reviewNegative: s.total_negative ?? 0,
+      reviewTotal:    noReviews ? 0 : s.total_reviews,
+      reviewPositive: Number.isFinite(s.total_positive) ? s.total_positive : 0,
+      reviewNegative: Number.isFinite(s.total_negative) ? s.total_negative : 0,
     },
   };
 }
@@ -68,16 +91,14 @@ function reviewError(appId, verdict) {
 }
 
 /**
- * Steam 리뷰 1건 조회 (전체 누적 집계만)
- * 참고: query_summary.total_reviews는 filter/day_range와 무관하게 전체 누적을
- * 반환하므로, 리뷰 급증은 signal4.js가 매일의 review_total 차분으로 계산한다.
+ * Steam 리뷰 1건 조회 (전체 누적 집계만) — IUserReviewsService/GetAppReviews
+ * 리뷰 급증은 signal4.js가 매일의 review_total 차분으로 계산한다.
  * 상태 코드와 본문을 직접 판정하기 위해 axios의 자동 throw/JSON 파싱을 끈다.
  */
 async function fetchReviews(appId) {
   let res;
   try {
-    res = await axios.get(REVIEWS_URL(appId), {
-      params: REVIEWS_PARAMS,
+    res = await axios.get(buildReviewsUrl(appId), {
       timeout: REQUEST_TIMEOUT_MS,
       validateStatus: () => true,
       responseType: 'text',
@@ -246,7 +267,7 @@ async function collectReviews() {
 
 module.exports = {
   collectReviews, collectReviewsCore, fetchReviews, fetchWithRetry,
-  classifyReviewResponse, summarizeReasons,
+  classifyReviewResponse, summarizeReasons, buildReviewsUrl, reviewsInput,
 };
 
 // 직접 실행 시 — failed면 exit 1 (run.js가 실패로 인식)

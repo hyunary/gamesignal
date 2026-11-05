@@ -25,6 +25,32 @@ const STEPS = [
   { label: '4/5 appdetails',  script: 'src/collectors/steamApi.js',   source: 'appdetails',  timeoutMs: envMs('STEP_TIMEOUT_APPDETAILS_MS', 17 * MIN) },
 ];
 const ENGINE_TIMEOUT_MS = envMs('STEP_TIMEOUT_SIGNAL_ENGINE_MS', 15 * MIN);
+const ENGINE_KEY = 'signal_engine';
+const STEP_KEYS = [...STEPS.map((s) => s.source), ENGINE_KEY];
+
+/**
+ * 실행 단계 선택 (workflow_dispatch 입력 steps → PIPELINE_STEPS)
+ *  - 비어 있음 / 'all'  → 전체 수집 + 신호 엔진 (schedule 실행은 항상 all)
+ *  - 'reviews'          → 리뷰만 실행, 신호 엔진은 건너뜀
+ *  - 'reviews,signal_engine' → 신호 엔진은 목록에 명시했을 때만 실행
+ * 구분자: 쉼표 또는 공백. 대소문자 무시. 모르는 이름이 있으면 throw (아무것도 실행하지 않음)
+ * 이유: 낮 시간 수동 실행 시 실시간 동접 순위가 아침과 달라 가짜 신규 진입 신호가 생김
+ */
+function parseSteps(input) {
+  const raw = String(input ?? '').trim().toLowerCase();
+  const tokens = raw.split(/[\s,]+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.includes('all')) {
+    return { steps: STEPS, runEngine: true, label: 'all' };
+  }
+  const unknown = tokens.filter((t) => !STEP_KEYS.includes(t));
+  if (unknown.length) {
+    throw new Error(`알 수 없는 단계: ${unknown.join(', ')} (사용 가능: all, ${STEP_KEYS.join(', ')})`);
+  }
+  const set = new Set(tokens);
+  const steps = STEPS.filter((s) => set.has(s.source)); // 정의 순서 유지
+  const runEngine = set.has(ENGINE_KEY);
+  return { steps, runEngine, label: [...steps.map((s) => s.source), ...(runEngine ? [ENGINE_KEY] : [])].join(',') };
+}
 
 // KST 기준 오늘 날짜 (수집기들과 같은 계산)
 function kstToday() {
@@ -86,6 +112,8 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, t]).finally(() => clearTimeout(timer));
 }
 
+const OUTCOME_LABEL = { ok: '✅ ok', timeout: '⏰ timeout', failed: '❌ failed', skipped: '⏭️ skipped' };
+
 // GitHub Actions 실행 요약 (Job Summary) — 오케스트레이터가 로그 없이 결과 확인
 function writeStepSummary(today, results, totalSec) {
   const lines = [
@@ -93,7 +121,7 @@ function writeStepSummary(today, results, totalSec) {
     '',
     '| 단계 | 결과 | 소요(초) | 메모 |',
     '|---|---|---|---|',
-    ...results.map((r) => `| ${r.label} | ${r.outcome === 'ok' ? '✅ ok' : r.outcome === 'timeout' ? '⏰ timeout' : '❌ failed'} | ${r.durationSec} | ${r.message ?? ''} |`),
+    ...results.map((r) => `| ${r.label} | ${OUTCOME_LABEL[r.outcome] || '❌ failed'} | ${r.durationSec} | ${r.message ?? ''} |`),
     '',
     `총 ${totalSec}초`,
   ];
@@ -109,25 +137,38 @@ async function runPipeline() {
   const { sendPipelineAlert } = require('../src/notifications/discord');
   const { failStaleRuns } = require('../src/db/queries');
 
+  const selection = parseSteps(process.env.PIPELINE_STEPS);
   const startTime = Date.now();
   const today = kstToday();
   console.log('\n🚀 GameSignal 파이프라인 시작');
   console.log(`📅 실행 시각: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} KST`);
   console.log(`📅 기준일: ${today}`);
+  console.log(`🧩 실행 단계: ${selection.label}${selection.runEngine ? '' : ' (신호 엔진 건너뜀)'}`);
   console.log('═'.repeat(50));
 
   const deps = { today, failStaleRuns, alert: sendPipelineAlert };
   const results = [];
 
-  // 1~4단계: 수집 — 실패해도 다음 단계로
+  // 1~4단계: 수집 — 실패해도 다음 단계로 (선택되지 않은 단계는 skipped)
   for (const step of STEPS) {
-    results.push(await runStep(step, deps));
+    if (selection.steps.includes(step)) {
+      results.push(await runStep(step, deps));
+    } else {
+      results.push({ label: step.label, source: step.source, outcome: 'skipped', durationSec: 0, message: `steps=${selection.label}` });
+    }
   }
 
-  // 5단계: 신호 엔진 — 수집 결과와 무관하게 반드시 실행
+  // 5단계: 신호 엔진 — all이면 수집 결과와 무관하게 반드시 실행, 단계 선택 시엔 명시한 경우만
+  const engine = { label: '5/5 신호 엔진', source: ENGINE_KEY, outcome: 'ok', durationSec: 0, message: null };
+  if (!selection.runEngine) {
+    console.log(`\n[5/5] 신호 엔진 건너뜀 (steps=${selection.label})`);
+    engine.outcome = 'skipped';
+    engine.message = `steps=${selection.label}`;
+    results.push(engine);
+    return finish(today, results, startTime);
+  }
   console.log(`\n[5/5] 신호 엔진 실행... (상한 ${fmt(ENGINE_TIMEOUT_MS)})`);
   const engineStart = Date.now();
-  const engine = { label: '5/5 신호 엔진', source: 'signal_engine', outcome: 'ok', durationSec: 0, message: null };
   try {
     const n = await withTimeout(runSignalEngine(), ENGINE_TIMEOUT_MS, '신호 엔진');
     engine.message = `신호 ${n}개`;
@@ -140,17 +181,21 @@ async function runPipeline() {
   }
   engine.durationSec = Math.round((Date.now() - engineStart) / 1000);
   results.push(engine);
+  return finish(today, results, startTime);
+}
 
+// 결과 요약 + 종료 코드 결정
+function finish(today, results, startTime) {
   const totalSec = Math.round((Date.now() - startTime) / 1000);
   writeStepSummary(today, results, totalSec);
 
-  // 한 단계라도 실패/timeout이면 exit 1 → workflow 실패 알림. (partial은 수집기가 exit 0)
-  const anyFailed = results.some((r) => r.outcome !== 'ok');
+  // 한 단계라도 실패/timeout이면 exit 1 → workflow 실패 알림. (partial은 수집기가 exit 0, skipped는 정상)
+  const anyFailed = results.some((r) => r.outcome === 'failed' || r.outcome === 'timeout');
   console.log(anyFailed ? `\n⚠️ 파이프라인 종료 — 실패 단계 있음 (${totalSec}초)` : `\n✅ 전체 파이프라인 완료 (${totalSec}초)`);
   return anyFailed ? 1 : 0;
 }
 
-module.exports = { runStep, withTimeout, fmt, STEPS };
+module.exports = { runStep, withTimeout, fmt, parseSteps, STEPS, STEP_KEYS };
 
 if (require.main === module) {
   runPipeline()

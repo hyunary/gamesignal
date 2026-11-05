@@ -1,67 +1,65 @@
 #!/usr/bin/env node
 /**
- * Steam appreviews 응답 진단 (DB·secrets 불필요)
+ * Steam 리뷰 API 응답 진단 (DB·secrets 불필요)
  *
- *   node scripts/diagnoseReviews.js 4019220 4080220 4115450 730
+ *   node scripts/diagnoseReviews.js 730 4019220 4080220
  *
- * 같은 appid를 파라미터 조합별로 호출해 HTTP 상태 / Content-Type / 최종 URL /
- * 본문 앞 300자 / 수집기 판정(classifyReviewResponse)을 출력한다.
- *  - 현재 파라미터만 실패하고 최소 파라미터는 성공 → 파라미터 문제
- *  - 모든 조합이 200인데 NON_JSON/NO_SUMMARY → 응답 형식 변경
- *  - success=1 이고 total_reviews=0 → 신작이라 리뷰 없음 (정상 처리됨)
- *  - 429/403 → 차단
- * 마지막 대조군으로 730(CS2)처럼 리뷰가 많은 게임을 함께 넣을 것.
+ * 수집기(src/collectors/reviews.js)와 동일한 URL·판정 함수로
+ * IUserReviewsService/GetAppReviews를 호출해 다음을 출력한다:
+ *   HTTP 상태 / Content-Type / 판정(OK 또는 사유 코드) / total·positive·negative / 본문 앞 300자
+ * 730(CS2)은 구 API 마지막 값(10/22 DB 993만)과 이어지는지 확인하기 위해
+ * total_reviews가 990만대(9,900,000 이상)인지 함께 표시한다.
  */
 const axios = require('axios');
-const { classifyReviewResponse } = require('../src/collectors/reviews');
+const { classifyReviewResponse, buildReviewsUrl } = require('../src/collectors/reviews');
 
-const VARIANTS = [
-  { name: '현재 수집기 파라미터', params: { json: 1, purchase_type: 'all', language: 'all', num_per_page: 0 } },
-  { name: '최소 파라미터',        params: { json: 1 } },
-  { name: '공식 문서 기본값',     params: { json: 1, filter: 'all', language: 'all', purchase_type: 'all', num_per_page: 20 } },
-];
+const CS2_APPID = 730;
+const CS2_MIN_EXPECTED = 9_900_000; // 10/22 구 API 값 993만 → 이후 증가만 가능
 
-async function probe(appId, variant) {
+const man = (n) => `${(n / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}만`;
+
+async function probe(appId) {
+  const url = buildReviewsUrl(appId);
   try {
-    const res = await axios.get(`https://store.steampowered.com/appreviews/${appId}`, {
-      params: variant.params,
+    const res = await axios.get(url, {
       timeout: 15000,
       validateStatus: () => true,
       responseType: 'text',
       transformResponse: [(d) => d],
-      maxRedirects: 5,
     });
-    const verdict = classifyReviewResponse(appId, res.status, res.data);
-    let summary = '';
-    try {
-      const j = JSON.parse(res.data);
-      summary = ` success=${j.success} total_reviews=${j.query_summary?.total_reviews} review_score_desc=${JSON.stringify(j.query_summary?.review_score_desc)}`;
-    } catch { /* JSON 아님 */ }
-    return {
-      line: `HTTP ${res.status} | ${res.headers['content-type'] || '-'} | ${res.request?.res?.responseUrl || '-'}`,
-      verdict: verdict.ok ? 'OK' : verdict.reason,
-      summary,
-      head: String(res.data).slice(0, 300).replace(/\s+/g, ' '),
-    };
+    return { url, status: res.status, type: res.headers['content-type'] || '-', body: res.data, verdict: classifyReviewResponse(appId, res.status, res.data) };
   } catch (e) {
-    return { line: `요청 실패: ${e.code || ''} ${e.message}`, verdict: 'NETWORK', summary: '', head: '' };
+    return { url, status: null, type: '-', body: '', verdict: { ok: false, reason: `NETWORK_${e.code || 'ERROR'}`, head: e.message } };
   }
 }
 
 (async () => {
   const ids = process.argv.slice(2).map(Number).filter(Number.isInteger);
   if (ids.length === 0) {
-    console.error('사용법: node scripts/diagnoseReviews.js <appid> [appid...]');
+    console.error('사용법: node scripts/diagnoseReviews.js <appid> [appid...]   (예: 730)');
     process.exit(2);
   }
-  for (const id of ids) {
+  let anyFail = false;
+  for (const [i, id] of ids.entries()) {
+    if (i > 0) await new Promise((ok) => setTimeout(ok, 1600)); // 수집기와 같은 호출 간격
+    const r = await probe(id);
     console.log(`\n══════ appid ${id} ══════`);
-    for (const v of VARIANTS) {
-      const r = await probe(id, v);
-      console.log(`[${v.name}] → 판정 ${r.verdict}${r.summary}`);
-      console.log(`   ${r.line}`);
-      console.log(`   본문: ${r.head}`);
-      await new Promise((ok) => setTimeout(ok, 1500));
+    console.log(`URL   : ${r.url}`);
+    console.log(`HTTP  : ${r.status ?? '-'} | ${r.type}`);
+    if (r.verdict.ok) {
+      const v = r.verdict.reviews;
+      console.log(`판정  : OK`);
+      console.log(`리뷰  : total_reviews=${v.reviewTotal.toLocaleString()} (${man(v.reviewTotal)}) · positive=${v.reviewPositive.toLocaleString()} · negative=${v.reviewNegative.toLocaleString()}`);
+      if (id === CS2_APPID) {
+        const ok = v.reviewTotal >= CS2_MIN_EXPECTED;
+        if (!ok) anyFail = true;
+        console.log(`검증  : ${ok ? '✅' : '⚠️'} CS2 total_reviews ${man(v.reviewTotal)} — 기대값 990만대 이상(10/22 DB 993만과 연속) ${ok ? '충족' : '미달 (languages/purchase_type 확인 필요)'}`);
+      }
+    } else {
+      anyFail = true;
+      console.log(`판정  : ${r.verdict.reason}`);
     }
+    console.log(`본문  : ${String(r.body || r.verdict.head || '').slice(0, 300).replace(/\s+/g, ' ')}`);
   }
+  process.exit(anyFail ? 1 : 0);
 })();

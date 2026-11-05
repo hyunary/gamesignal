@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 
 const {
-  classifyReviewResponse, collectReviewsCore, fetchWithRetry, summarizeReasons,
+  classifyReviewResponse, collectReviewsCore, fetchWithRetry, summarizeReasons, buildReviewsUrl,
 } = require('../../src/collectors/reviews');
 const { withPipelineRun, deriveStatus } = require('../../src/utils/pipelineRun');
 const { retryWithBackoff } = require('../../src/utils/retry');
@@ -15,38 +15,75 @@ const { runStep } = require('../../pipeline/run');
 const quietLog = { log() {}, warn() {}, error() {} };
 const noWait = async () => {};
 
-// ── 10. 리뷰 응답 판정 ───────────────────────────────────────────────
-test('classify: 정상 응답 → ok', () => {
-  const body = JSON.stringify({ success: 1, query_summary: { total_reviews: 120, total_positive: 100, total_negative: 20 } });
-  const v = classifyReviewResponse(1, 200, body);
-  assert.equal(v.ok, true);
-  assert.deepEqual(v.reviews, { appId: 1, reviewTotal: 120, reviewPositive: 100, reviewNegative: 20 });
+// ── 리뷰 응답 판정 — IUserReviewsService/GetAppReviews 신규 구조 ─────
+// 토마스가 Mac Mini에서 CS2(730) 호출로 확인한 응답 구조 기반 샘플
+const GETAPPREVIEWS_SAMPLE = JSON.stringify({
+  response: {
+    query_summary: {
+      num_reviews: 1, review_score: 8, review_score_desc: 'Very Positive',
+      total_positive: 8620000, total_negative: 1340000, total_reviews: 9960000,
+    },
+    reviews: [{ recommendationid: '1', author: { steamid: '1' }, language: 'english', voted_up: true }],
+    cursor: 'AoJ4abc=',
+  },
 });
-test('classify: 리뷰 0건 신작 → 실패가 아니라 ok (0 저장)', () => {
-  const v = classifyReviewResponse(2, 200, '{"success":1,"query_summary":{"num_reviews":0,"total_reviews":0,"total_positive":0,"total_negative":0}}');
+// 2026-10-22 이후 구 appreviews가 돌려주는 상점 홈 HTML (HTTP 200)
+const STORE_HOME_HTML =
+  '<!DOCTYPE html>\n<html class=" responsive" lang="en">\n<head>\n\t<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n' +
+  '\t<title>Welcome to Steam</title>\n' + '\t<link href="https://store.cloudflare.steamstatic.com/public/shared/css/motiva_sans.css" rel="stylesheet">\n'.repeat(10);
+
+test('classify: GetAppReviews 신규 응답 샘플 → ok, total/positive/negative 추출', () => {
+  const v = classifyReviewResponse(730, 200, GETAPPREVIEWS_SAMPLE);
   assert.equal(v.ok, true);
-  assert.equal(v.reviews.reviewTotal, 0);
+  assert.deepEqual(v.reviews, { appId: 730, reviewTotal: 9960000, reviewPositive: 8620000, reviewNegative: 1340000 });
 });
-test('classify: 429/403 → BLOCKED, 재시도 안 함', () => {
-  for (const s of [429, 403]) {
-    const v = classifyReviewResponse(3, s, 'Too Many Requests');
+test('classify: 상점 홈 HTML(HTTP 200) → NON_JSON + 본문 앞 300자 보존', () => {
+  const v = classifyReviewResponse(730, 200, STORE_HOME_HTML);
+  assert.equal(v.ok, false);
+  assert.equal(v.reason, 'NON_JSON');
+  assert.equal(v.head.length, 300);
+  assert.match(v.head, /Welcome to Steam/);
+});
+test('classify: 구 appreviews 구조(최상위 success/query_summary)는 더 이상 인정 안 함 → NO_SUMMARY', () => {
+  const old = '{"success":1,"query_summary":{"total_reviews":120,"total_positive":100,"total_negative":20}}';
+  assert.equal(classifyReviewResponse(1, 200, old).reason, 'NO_SUMMARY');
+});
+test('classify: response 또는 query_summary 없음 → NO_SUMMARY', () => {
+  assert.equal(classifyReviewResponse(1, 200, '{}').reason, 'NO_SUMMARY');
+  assert.equal(classifyReviewResponse(1, 200, '{"response":{}}').reason, 'NO_SUMMARY');
+  assert.equal(classifyReviewResponse(1, 200, '{"response":{"query_summary":"x"}}').reason, 'NO_SUMMARY');
+});
+test('classify: 리뷰가 있는데 total_reviews가 숫자가 아님 → NO_SUMMARY (형식 변경 의심)', () => {
+  const body = JSON.stringify({ response: { query_summary: { total_positive: 5 }, reviews: [{}] } });
+  assert.equal(classifyReviewResponse(1, 200, body).reason, 'NO_SUMMARY');
+});
+test('classify: 0인 필드 생략(protobuf JSON) → 0으로 처리', () => {
+  // 전부 긍정이라 total_negative 생략
+  const allPositive = JSON.stringify({ response: { query_summary: { total_reviews: 40, total_positive: 40 }, reviews: [{}] } });
+  assert.deepEqual(classifyReviewResponse(2, 200, allPositive).reviews, { appId: 2, reviewTotal: 40, reviewPositive: 40, reviewNegative: 0 });
+  // 리뷰 0건 신작: 집계 필드가 모두 생략되고 reviews도 비어 있음
+  const empty = JSON.stringify({ response: { query_summary: { review_score_desc: 'No user reviews' }, reviews: [] } });
+  assert.deepEqual(classifyReviewResponse(3, 200, empty).reviews, { appId: 3, reviewTotal: 0, reviewPositive: 0, reviewNegative: 0 });
+  // total_reviews: 0 명시
+  const zero = JSON.stringify({ response: { query_summary: { total_reviews: 0 } } });
+  assert.equal(classifyReviewResponse(4, 200, zero).reviews.reviewTotal, 0);
+});
+test('classify: 429/403 → BLOCKED(재시도 안 함), 5xx → 재시도, 404 → HTTP_404', () => {
+  for (const st of [429, 403]) {
+    const v = classifyReviewResponse(3, st, 'Too Many Requests');
     assert.equal(v.reason, 'BLOCKED'); assert.equal(v.retryable, false);
   }
-});
-test('classify: 5xx → 재시도, 404 → 재시도 안 함', () => {
   assert.equal(classifyReviewResponse(4, 502, '').retryable, true);
   const v = classifyReviewResponse(4, 404, '');
   assert.equal(v.reason, 'HTTP_404'); assert.equal(v.retryable, false);
 });
-test('classify: HTML 응답 → NON_JSON + 본문 앞 300자 보존', () => {
-  const html = '<!DOCTYPE html><html>' + 'x'.repeat(1000);
-  const v = classifyReviewResponse(5, 200, html);
-  assert.equal(v.reason, 'NON_JSON');
-  assert.equal(v.head.length, 300);
-});
-test('classify: success≠1 → API_SUCCESS_n, summary 없음 → NO_SUMMARY', () => {
-  assert.equal(classifyReviewResponse(6, 200, '{"success":2}').reason, 'API_SUCCESS_2');
-  assert.equal(classifyReviewResponse(6, 200, '{"success":1}').reason, 'NO_SUMMARY');
+test('buildReviewsUrl: 신규 엔드포인트 + input_json(JSON.stringify → URL 인코딩)', () => {
+  const url = buildReviewsUrl(730);
+  const u = new URL(url);
+  assert.equal(u.origin + u.pathname, 'https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/');
+  assert.deepEqual(JSON.parse(u.searchParams.get('input_json')), { appid: 730, num_per_page: 1, languages: ['all'], purchase_type: 1 });
+  assert.doesNotMatch(url.split('?')[1], /[{}"\[\]:,]/, '구분 문자가 모두 인코딩돼야 함');
+  assert.deepEqual([...u.searchParams.keys()], ['input_json'], 'key 파라미터 없이 호출');
 });
 
 // ── 리뷰 수집 루프: 시간 상한 · 차단 건너뛰기 · 0건 failed ────────────
@@ -89,13 +126,13 @@ test('core: 연속 차단 N회면 IP 차단으로 판단해 중단', async () =>
 
 test('core: 사유별 집계와 첫 사례 보존 (10번 진단 근거)', async () => {
   const stats = await collectReviewsCore(games(3), {
-    fetch: async (id) => { throw Object.assign(new Error('x'), { reason: 'API_SUCCESS_2', status: 200, head: `{"success":2} ${id}` }); },
+    fetch: async (id) => { throw Object.assign(new Error('x'), { reason: 'NO_SUMMARY', status: 200, head: `{"response":{}} ${id}` }); },
     save: async () => {}, wait: noWait, intervalMs: 0, log: quietLog,
   });
   assert.equal(stats.saved, 0);
-  assert.equal(stats.reasons.API_SUCCESS_2.count, 3);
-  assert.equal(stats.reasons.API_SUCCESS_2.sample.appId, 1000);
-  assert.match(summarizeReasons(stats, 3), /0\/3 저장 · 실패 사유: API_SUCCESS_2×3/);
+  assert.equal(stats.reasons.NO_SUMMARY.count, 3);
+  assert.equal(stats.reasons.NO_SUMMARY.sample.appId, 1000);
+  assert.match(summarizeReasons(stats, 3), /0\/3 저장 · 실패 사유: NO_SUMMARY×3/);
 });
 
 test('fetchWithRetry: 일시 오류만 1회 재시도, 형식 오류는 즉시 실패', async () => {
@@ -244,4 +281,56 @@ test('run.js: 실제 기본 상한값(STEP_TIMEOUT_* 미설정)으로 1단계 �
   assert.match(r.stdout, /\[1\/5 Most Played\] 실행 중\.\.\. \(상한 15분\)/);
   assert.match(r.stdout, /\[1\/5 Most Played\] 완료 ✅/);
   assert.match(r.stdout, /OUTCOME=ok TIMEOUT_MS=900000/);
+});
+
+// ── 단계 선택 (workflow_dispatch 입력 steps → PIPELINE_STEPS) ──────────
+test('parseSteps: 비어 있음/all → 전체 + 신호 엔진', () => {
+  const { parseSteps, STEPS } = require('../../pipeline/run');
+  for (const input of [undefined, '', '  ', 'all', 'ALL', 'all,reviews']) {
+    const r = parseSteps(input);
+    assert.equal(r.steps, STEPS, `input=${JSON.stringify(input)}`);
+    assert.equal(r.runEngine, true);
+    assert.equal(r.label, 'all');
+  }
+});
+test('parseSteps: reviews → 리뷰만, 신호 엔진 건너뜀', () => {
+  const { parseSteps } = require('../../pipeline/run');
+  const r = parseSteps('reviews');
+  assert.deepEqual(r.steps.map((x) => x.source), ['reviews']);
+  assert.equal(r.runEngine, false);
+});
+test('parseSteps: 공백·대소문자 허용, 정의 순서 유지, signal_engine은 명시 시에만', () => {
+  const { parseSteps } = require('../../pipeline/run');
+  const r = parseSteps(' Reviews , wishlist signal_engine ');
+  assert.deepEqual(r.steps.map((x) => x.source), ['wishlist', 'reviews']);
+  assert.equal(r.runEngine, true);
+  assert.equal(r.label, 'wishlist,reviews,signal_engine');
+  const onlyEngine = parseSteps('signal_engine');
+  assert.deepEqual(onlyEngine.steps, []);
+  assert.equal(onlyEngine.runEngine, true);
+});
+test('parseSteps: 모르는 단계명 → throw (아무것도 실행하지 않음)', () => {
+  const { parseSteps } = require('../../pipeline/run');
+  assert.throws(() => parseSteps('review'), /알 수 없는 단계: review .*사용 가능: all, most_played, wishlist, reviews, appdetails, signal_engine/);
+});
+test('run.js: PIPELINE_STEPS=reviews → 리뷰만 실행, 나머지·신호 엔진은 skipped (DB 없음)', () => {
+  const env = { ...process.env, PIPELINE_STEPS: 'reviews', DATABASE_URL: 'postgres://u:p@127.0.0.1:1/x' };
+  delete env.GITHUB_STEP_SUMMARY;
+  const r = spawnSync(process.execPath, [path.resolve(__dirname, '../../pipeline/run.js')], { env, encoding: 'utf8', timeout: 60000, cwd: path.resolve(__dirname, '../..') });
+  const out = r.stdout + r.stderr;
+  assert.match(out, /🧩 실행 단계: reviews \(신호 엔진 건너뜀\)/);
+  assert.match(out, /\[3\/5 리뷰\] 실행 중\.\.\./);
+  assert.doesNotMatch(out, /\[1\/5 Most Played\] 실행 중/);
+  assert.match(out, /\[5\/5\] 신호 엔진 건너뜀/);
+  assert.match(out, /\| 1\/5 Most Played \| ⏭️ skipped/);
+  assert.match(out, /\| 5\/5 신호 엔진 \| ⏭️ skipped/);
+  assert.equal(r.status, 1, 'DB가 없으니 리뷰 단계는 실패 → exit 1');
+});
+test('run.js: PIPELINE_STEPS 오타 → 아무 단계도 실행하지 않고 exit 1', () => {
+  const env = { ...process.env, PIPELINE_STEPS: 'reveiws', DATABASE_URL: 'postgres://u:p@127.0.0.1:1/x' };
+  const r = spawnSync(process.execPath, [path.resolve(__dirname, '../../pipeline/run.js')], { env, encoding: 'utf8', timeout: 30000, cwd: path.resolve(__dirname, '../..') });
+  const out = r.stdout + r.stderr;
+  assert.equal(r.status, 1);
+  assert.match(out, /알 수 없는 단계: reveiws/);
+  assert.doesNotMatch(out, /실행 중\.\.\./);
 });
