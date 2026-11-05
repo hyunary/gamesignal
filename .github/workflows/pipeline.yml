@@ -10,6 +10,13 @@ on:
         description: '실행 이유'
         required: false
         default: '수동 테스트'
+      steps:
+        # 예: reviews → 리뷰만 실행, 신호 엔진 건너뜀 (낮 시간 실행 시 가짜 신규 진입 신호 방지)
+        #     reviews,signal_engine → 신호 엔진은 명시했을 때만 실행
+        description: '실행 단계 (all 또는 쉼표 구분: most_played, wishlist, reviews, appdetails, signal_engine)'
+        required: false
+        default: 'all'
+        type: string
 jobs:
   run-pipeline:
     # ubuntu-latest 이미지 전환에 따른 예기치 않은 변경 방지 — 버전 고정
@@ -64,6 +71,8 @@ jobs:
           SCRAPE_DELAY_MAX_MS:       '5000'
           BLOCK_WAIT_MS:             '900000'
           NODE_ENV:                  production
+          # schedule 실행은 항상 all — 수동 실행(workflow_dispatch)일 때만 입력값 사용
+          PIPELINE_STEPS: ${{ github.event_name == 'workflow_dispatch' && inputs.steps || 'all' }}
         run: node pipeline/run.js
       - name: 실패·취소 시 Discord 알림
         # cancelled(timeout 포함)는 failure()에 잡히지 않아 그동안 알림이 누락됐음
