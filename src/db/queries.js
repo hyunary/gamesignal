@@ -62,14 +62,31 @@ async function startPipelineRun(source) {
   return rows[0].run_id;
 }
 // pipeline_runs 완료 기록
-async function finishPipelineRun(runId, status, rowsCollected, errorMessage = null) {
+// status: 'success' | 'partial' | 'failed' (run_status ENUM)
+// rowsFailed는 선택 — 넘기지 않으면 기존 값 유지
+async function finishPipelineRun(runId, status, rowsCollected, errorMessage = null, rowsFailed = null) {
   await pool.query(`
     UPDATE pipeline_runs SET
       status = $2,
       finished_at = NOW(),
       rows_collected = $3,
-      error_message = $4
+      error_message = $4,
+      rows_failed = COALESCE($5, rows_failed)
     WHERE run_id = $1
-  `, [runId, status, rowsCollected, errorMessage]);
+  `, [runId, status, rowsCollected, errorMessage, rowsFailed]);
 }
-module.exports = { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun };
+// 단계가 timeout/kill 등으로 finally에 도달하지 못했을 때
+// 해당 날짜·소스의 'running' 행만 'failed'로 마감 (오케스트레이터 run.js에서 호출)
+async function failStaleRuns(runDate, sources, errorMessage) {
+  const { rowCount } = await pool.query(`
+    UPDATE pipeline_runs SET
+      status = 'failed',
+      finished_at = NOW(),
+      error_message = COALESCE(error_message, $3)
+    WHERE run_date = $1::date
+      AND source = ANY($2::text[])
+      AND status = 'running'
+  `, [runDate, sources, errorMessage]);
+  return rowCount;
+}
+module.exports = { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun, failStaleRuns };

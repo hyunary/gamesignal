@@ -12,10 +12,18 @@ const SIGNAL_CONFIG = {
   composite:       { emoji: '⚡', label: '복합 신호',             color: 0xc880f0 },
 };
 // Discord 웹훅으로 메시지 전송
+// 429는 Retry-After만큼(최대 30초) 대기 — 공통 BLOCK_WAIT_MS(15분)를 쓰지 않음
 async function sendDiscordMessage(webhookUrl, payload) {
+  if (!webhookUrl) throw new Error('Discord webhook URL 미설정');
   await retryWithBackoff(
     () => axios.post(webhookUrl, payload, { timeout: 10000 }),
-    { label: 'discord', maxRetries: 3, baseMs: 1000 }
+    {
+      label: 'discord',
+      maxRetries: 3,
+      baseMs: 1000,
+      blockMs: parseInt(process.env.DISCORD_MAX_RETRY_AFTER_MS) || 30000,
+      respectRetryAfter: true,
+    }
   );
 }
 // 신호 알림 (P0 → ALERT 채널)

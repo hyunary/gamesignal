@@ -32,7 +32,12 @@ async function runSignalEngine(date) {
     if (wlNewEntries.length > 0) {
       console.log(`\n🎬 YouTube 감성 분석 시작 (${wlNewEntries.length}개 게임)...`);
       for (const game of wlNewEntries) {
-        await analyzeGameSentiment(game.app_id, game.title);
+        try {
+          await analyzeGameSentiment(game.app_id, game.title);
+        } catch (err) {
+          // 감성 분석은 부가 정보 — 실패해도 신호 감지는 계속
+          console.warn(`  ⚠️ YouTube 감성 분석 실패 (${game.title}): ${err.message}`);
+        }
         await new Promise(r => setTimeout(r, 2000)); // API 호출 간격
       }
     }
@@ -43,6 +48,15 @@ async function runSignalEngine(date) {
     // S5: 복합 신호 (S1~S4 완료 후 실행)
     totalSignals += await detectComposite(today);
     await finishPipelineRun(runId, 'success', totalSignals);
+  } catch (err) {
+    // 신호 감지 자체가 실패한 경우만 failed
+    await finishPipelineRun(runId, 'failed', totalSignals, err.message).catch((e) =>
+      console.error(`⚠️ pipeline_runs[signal_engine] 마감 기록 실패: ${e.message}`));
+    throw err;
+  }
+
+  // ── 알림·요약 단계: 실패해도 신호 기록(success)은 유지, 로그와 경고만 남김 ──
+  try {
     // Discord 신호 알림 발송 (P0 우선, 미발송 신호만)
     const { rows: unnotified } = await pool.query(`
       SELECT
@@ -93,7 +107,7 @@ async function runSignalEngine(date) {
       )).rows[0].count,
       signals: totalSignals,
       duration
-    });
+    }).catch((err) => console.error(`  ❌ 파이프라인 완료 알림 실패: ${err.message}`));
     // 결과 요약
     console.log('\n' + '═'.repeat(50));
     console.log(`✅ 신호 엔진 완료 — 총 ${totalSignals}개 신호 생성`);
@@ -122,8 +136,8 @@ async function runSignalEngine(date) {
       console.log('   (데이터가 2일 이상 쌓이면 신호가 감지됩니다)');
     }
   } catch (err) {
-    await finishPipelineRun(runId, 'failed', totalSignals, err.message);
-    throw err;
+    console.error(`⚠️ 신호 알림/요약 단계 오류 (신호 ${totalSignals}개는 저장됨): ${err.message}`);
+    await sendPipelineAlert('signal_engine(알림)', err.message).catch(() => {});
   }
   return totalSignals;
 }

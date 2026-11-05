@@ -12,18 +12,21 @@ on:
         default: '수동 테스트'
 jobs:
   run-pipeline:
-    runs-on: ubuntu-latest
+    # ubuntu-latest 이미지 전환에 따른 예기치 않은 변경 방지 — 버전 고정
+    runs-on: ubuntu-24.04
+    # 단계별 상한 합계 72분(pipeline/run.js) + 설치 여유. 이 값에 걸리면 cancelled 처리됨
     timeout-minutes: 90
     steps:
       - name: 코드 체크아웃
-        uses: actions/checkout@v4
-      - name: Node.js 20 설정
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v6
+      - name: Node.js 22 설정
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          # Node 20은 2026-04 EOL → 22 (LTS)
+          node-version: '22'
           cache: 'npm'
       - name: Python 설정 (Playwright용)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: 패키지 설치
@@ -46,7 +49,15 @@ jobs:
           YOUTUBE_API_KEYS:          ${{ secrets.YOUTUBE_API_KEYS }}
           DISCORD_WEBHOOK_ALERT:     ${{ secrets.DISCORD_WEBHOOK_ALERT }}
           DISCORD_WEBHOOK_PIPELINE:  ${{ secrets.DISCORD_WEBHOOK_PIPELINE }}
-          PIPELINE_TIMEOUT_MS:       '3600000'
+          # 단계별 상한 (pipeline/run.js) — 리뷰·appdetails는 수집기 내부 상한 15분
+          STEP_TIMEOUT_MOST_PLAYED_MS:   '900000'
+          STEP_TIMEOUT_WISHLIST_MS:      '480000'
+          STEP_TIMEOUT_REVIEWS_MS:       '1020000'
+          STEP_TIMEOUT_APPDETAILS_MS:    '1020000'
+          STEP_TIMEOUT_SIGNAL_ENGINE_MS: '900000'
+          REVIEWS_BUDGET_MS:             '900000'
+          REVIEWS_INTERVAL_MS:           '1600'
+          APPDETAILS_BUDGET_MS:          '900000'
           RETRY_MAX:                 '3'
           RETRY_BASE_MS:             '1000'
           SCRAPE_DELAY_MIN_MS:       '3000'
@@ -54,11 +65,14 @@ jobs:
           BLOCK_WAIT_MS:             '900000'
           NODE_ENV:                  production
         run: node pipeline/run.js
-      - name: 실패 시 Discord 알림
-        if: failure()
+      - name: 실패·취소 시 Discord 알림
+        # cancelled(timeout 포함)는 failure()에 잡히지 않아 그동안 알림이 누락됐음
+        if: failure() || cancelled()
         env:
           DISCORD_WEBHOOK_ALERT: ${{ secrets.DISCORD_WEBHOOK_ALERT }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
         run: |
-          curl -H "Content-Type: application/json" \
-          -d "{\"embeds\":[{\"title\":\"🚨 GitHub Actions 파이프라인 실패\",\"description\":\"즉시 확인이 필요합니다.\",\"color\":14889515}]}" \
-          $DISCORD_WEBHOOK_ALERT
+          curl -sS -H "Content-Type: application/json" \
+          -d "{\"embeds\":[{\"title\":\"🚨 GitHub Actions 파이프라인 ${JOB_STATUS}\",\"description\":\"즉시 확인이 필요합니다.\\n${RUN_URL}\",\"color\":14889515}]}" \
+          "$DISCORD_WEBHOOK_ALERT"

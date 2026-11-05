@@ -3,8 +3,9 @@ const { Pool } = require('pg');
 if (!process.env.DATABASE_URL) {
   require('dotenv').config();
 }
-const { upsertSnapshot, startPipelineRun, finishPipelineRun } = require('../db/queries');
+const { upsertSnapshot } = require('../db/queries');
 const { retryWithBackoff } = require('../utils/retry');
+const { withPipelineRun } = require('../utils/pipelineRun');
 const { fallbackToPreviousDay } = require('../utils/fallback');
 const { sleep } = require('../utils/sleep');
 
@@ -111,9 +112,9 @@ async function scrapeMostPlayed() {
   console.log('\n💾 DB 저장 중...');
   const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const today = kst.toISOString().split('T')[0];
-  const runId = await startPipelineRun('most_played');
 
   let saved = 0;
+  let saveFailed = 0;
   for (const game of games) {
     try {
       // 이름은 건드리지 않고 row만 보장 (기존 이름 보존, steamApi.js가 정식 이름 관리)
@@ -126,29 +127,35 @@ async function scrapeMostPlayed() {
       await upsertSnapshot(game.appId, game.rank, game.ccu, game.peak, today);
       saved++;
     } catch (err) {
+      saveFailed++;
       console.error(`⚠️ 저장 실패 (appId ${game.appId}):`, err.message);
     }
   }
 
-  await finishPipelineRun(runId, 'success', saved);
+  if (saved === 0) throw new Error(`Most Played 저장 0건 (저장 실패 ${saveFailed}건)`);
   console.log(`✅ ${saved}개 게임 DB 저장 완료`);
 
-  return games;
+  return { games, saved, failed: saveFailed + failed };
 }
 
 // 메인 실행 (재시도 + 폴백 포함)
-retryWithBackoff(scrapeMostPlayed, {
-  maxRetries: 3,
-  label: 'most_played',
-  onFail: async (err) => {
-    console.error('❌ 최종 실패 — 전일 데이터 폴백 실행:', err.message);
-    await fallbackToPreviousDay('most_played');
-  },
+// withPipelineRun: 어떤 경로로 끝나든 pipeline_runs를 success/partial/failed로 마감
+withPipelineRun('most_played', async (run) => {
+  const result = await retryWithBackoff(scrapeMostPlayed, {
+    maxRetries: 3,
+    label: 'most_played',
+    onFail: async (err) => {
+      console.error('❌ 최종 실패 — 전일 데이터 폴백 실행:', err.message);
+      await fallbackToPreviousDay('most_played');
+    },
+  });
+  run.collected = result.saved;
+  run.failed    = result.failed;
+  run.expected  = result.games.length;
+  return result;
 })
-  .then(async (games) => {
-    if (games) {
-      console.log(`\n🎉 완료! 총 ${games.length}개 게임 수집 및 저장됨`);
-    }
+  .then(async (result) => {
+    console.log(`\n🎉 완료! 총 ${result.games.length}개 게임 수집 및 ${result.saved}개 저장됨`);
     await pool.end();
     process.exit(0);
   })
