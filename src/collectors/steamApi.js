@@ -1,10 +1,15 @@
 const axios = require('axios');
 const pool = require('../db/pool');
 const { retryWithBackoff } = require('../utils/retry');
+const { withPipelineRun, deriveStatus } = require('../utils/pipelineRun');
 const { sleep } = require('../utils/sleep');
 if (!process.env.DATABASE_URL) {
   require('dotenv').config();
 }
+// 단계 시간 상한 — 초과 시 남은 게임은 다음 배치로 미루고 partial 마감 (신호 엔진 보장)
+const BUDGET_MS = parseInt(process.env.APPDETAILS_BUDGET_MS) || 15 * 60 * 1000;
+// 연속 차단 시 중단 (같은 IP로 계속 호출해도 의미 없음)
+const MAX_CONSECUTIVE_BLOCKS = parseInt(process.env.APPDETAILS_MAX_CONSECUTIVE_BLOCKS) || 5;
 // 게임 상세 정보 수집 (appdetails API)
 async function fetchAppDetails(appId) {
   const { data } = await axios.get(
@@ -87,56 +92,98 @@ async function collectAppDetails() {
   // 수집 대상 결정
   let query;
   if (isMonday) {
-    // 월요일: 전체 갱신
+    // 월요일: 전체 갱신 — 시간 상한에 걸려도 오래된 것부터 갱신되도록 updated_at 오름차순
     console.log('📅 월요일 — 전체 게임 상세 정보 갱신');
-    query = `SELECT app_id, title FROM games ORDER BY app_id`;
+    query = `SELECT app_id, title FROM games ORDER BY updated_at ASC NULLS FIRST, app_id`;
   } else {
     // 평일: developer가 없는 신규 게임 + 임시 이름(Game_{appid}) 게임
     console.log('📅 평일 — 신규 게임만 상세 정보 수집');
     query = `SELECT app_id, title FROM games WHERE developer IS NULL OR title LIKE 'Game\\_%' ORDER BY app_id`;
   }
-  const { rows: targets } = await pool.query(query);
-  console.log(`📋 수집 대상: ${targets.length}개 게임`);
-  if (targets.length === 0) {
-    console.log('✅ 수집할 신규 게임 없음 — 완료');
-    return [];
-  }
-  const results = { success: 0, failed: 0, filtered: 0 };
-  for (const game of targets) {
-    try {
-      // API 호출 간격 1초 (Rate Limit 준수)
-      await sleep(1000);
-      const details = await retryWithBackoff(
-        () => fetchAppDetails(game.app_id),
-        { label: `appdetails(${game.app_id})`, maxRetries: 2, baseMs: 2000 }
-      );
-      await updateGameDetails(details);
-      // DLC/소프트웨어/성인물 표시
-      const flags = [];
-      if (details.isDlc)      flags.push('DLC');
-      if (details.isSoftware) flags.push('SW');
-      if (details.isAdultOnly) flags.push('Adult');
-      const flagStr = flags.length > 0 ? ` [${flags.join('/')}]` : '';
-      console.log(`  ✅ ${game.title}${flagStr}`);
-      results.success++;
-    } catch (err) {
-      console.warn(`  ⚠️ 실패 (${game.title}): ${err.message}`);
-      results.failed++;
+  return withPipelineRun('appdetails', async (run) => {
+    const { rows: targets } = await pool.query(query);
+    run.expected = targets.length;
+    console.log(`📋 수집 대상: ${targets.length}개 게임 (시간 상한 ${Math.round(BUDGET_MS / 60000)}분)`);
+    if (targets.length === 0) {
+      console.log('✅ 수집할 신규 게임 없음 — 완료');
+      run.status = 'success';
+      return { success: 0, failed: 0, skipped: 0, status: 'success' };
     }
-  }
-  console.log(`\n📊 결과: 성공 ${results.success}개 / 실패 ${results.failed}개`);
-  return results;
+    const deadline = Date.now() + BUDGET_MS;
+    const results = { success: 0, failed: 0, skipped: 0, blocked: 0, aborted: null };
+    let consecutiveBlocks = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const game = targets[i];
+      if (Date.now() >= deadline) {
+        results.aborted = 'BUDGET';
+        results.skipped += targets.length - i;
+        console.warn(`  ⏱️ 시간 상한 도달 → 남은 ${targets.length - i}개는 다음 배치로`);
+        break;
+      }
+      try {
+        // API 호출 간격 1초 (Rate Limit 준수)
+        await sleep(1000);
+        const details = await retryWithBackoff(
+          () => fetchAppDetails(game.app_id),
+          // 429/403은 15분 대기 없이 해당 게임만 건너뜀
+          { label: `appdetails(${game.app_id})`, maxRetries: 2, baseMs: 2000, skipOnBlock: true }
+        );
+        await updateGameDetails(details);
+        consecutiveBlocks = 0;
+        // DLC/소프트웨어/성인물 표시
+        const flags = [];
+        if (details.isDlc)      flags.push('DLC');
+        if (details.isSoftware) flags.push('SW');
+        if (details.isAdultOnly) flags.push('Adult');
+        const flagStr = flags.length > 0 ? ` [${flags.join('/')}]` : '';
+        console.log(`  ✅ ${game.title}${flagStr}`);
+        results.success++;
+      } catch (err) {
+        if (err.isBlocked) {
+          results.blocked++;
+          results.skipped++;
+          consecutiveBlocks++;
+          if (consecutiveBlocks >= MAX_CONSECUTIVE_BLOCKS) {
+            results.aborted = 'BLOCKED';
+            results.skipped += targets.length - i - 1;
+            console.warn(`  ⛔ 연속 차단 ${consecutiveBlocks}회 → 남은 ${targets.length - i - 1}개 건너뜀`);
+            break;
+          }
+        } else {
+          consecutiveBlocks = 0;
+          console.warn(`  ⚠️ 실패 (${game.title}): ${err.message}`);
+          results.failed++;
+        }
+      }
+    }
+    run.collected = results.success;
+    run.failed    = results.failed + results.blocked;
+    run.skipped   = results.skipped;
+    run.status    = deriveStatus(run);
+    if (run.status !== 'success') {
+      run.error = `${results.success}/${targets.length} 성공 · 실패 ${results.failed} · 차단 ${results.blocked}` +
+        (results.aborted ? ` · 중단: ${results.aborted}` : '');
+    }
+    console.log(`\n📊 결과: 성공 ${results.success}개 / 실패 ${results.failed}개 / 차단 ${results.blocked}개 / 건너뜀 ${results.skipped}개 → ${run.status}`);
+    return { ...results, status: run.status };
+  });
 }
 module.exports = { collectAppDetails, fetchAppDetails, updateGameDetails };
 // 직접 실행 시
 if (require.main === module) {
   collectAppDetails()
-    .then(() => {
+    .then(async (r) => {
+      await pool.end().catch(() => {});
+      if (r?.status === 'failed') {
+        console.error('\n❌ appdetails 수집 실패 (성공 0건)');
+        process.exit(1);
+      }
       console.log('\n🎉 appdetails 수집 완료!');
       process.exit(0);
     })
-    .catch(err => {
+    .catch(async (err) => {
       console.error('❌ 실패:', err.message);
+      await pool.end().catch(() => {});
       process.exit(1);
     });
 }

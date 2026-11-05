@@ -1,7 +1,8 @@
 const axios = require('axios');
 const pool = require('../db/pool');
-const { upsertGame, startPipelineRun, finishPipelineRun } = require('../db/queries');
+const { upsertGame } = require('../db/queries');
 const { retryWithBackoff } = require('../utils/retry');
+const { withPipelineRun } = require('../utils/pipelineRun');
 const { fallbackToPreviousDay } = require('../utils/fallback');
 const { sleep } = require('../utils/sleep');
 require('dotenv').config();
@@ -40,8 +41,8 @@ async function saveWishlistData(games) {
   // KST 기준 오늘 날짜 (UTC+9)
   const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const today = kst.toISOString().split('T')[0];
-  const runId = await startPipelineRun('wishlist');
   let saved = 0;
+  let failed = 0;
   for (const game of games) {
     try {
       // 게임 기본 정보 저장
@@ -75,30 +76,38 @@ async function saveWishlistData(games) {
       `, [game.appId, today, game.rank, isNewEntry, rankChangeFlag]);
       saved++;
     } catch (err) {
+      failed++;
       console.error(`⚠️ 저장 실패 (${game.title}):`, err.message);
     }
   }
-  await finishPipelineRun(runId, 'success', saved);
+  if (saved === 0) throw new Error(`Wishlist 저장 0건 (저장 실패 ${failed}건)`);
   console.log(`✅ ${saved}개 게임 DB 저장 완료`);
-  return saved;
+  return { saved, failed };
 }
 // 메인 실행
-retryWithBackoff(
-  async () => {
-    const games = await fetchSteamSpyWishlist();
-    await saveWishlistData(games);
-    return games;
-  },
-  {
-    label: 'wishlist',
-    onFail: async () => {
-      console.error('❌ 최종 실패 — 전일 데이터 폴백 실행');
-      await fallbackToPreviousDay('wishlist');
+// withPipelineRun: 어떤 경로로 끝나든 pipeline_runs를 success/partial/failed로 마감
+withPipelineRun('wishlist', async (run) => {
+  const result = await retryWithBackoff(
+    async () => {
+      const games = await fetchSteamSpyWishlist();
+      const saveResult = await saveWishlistData(games);
+      return { games, ...saveResult };
+    },
+    {
+      label: 'wishlist',
+      onFail: async () => {
+        console.error('❌ 최종 실패 — 전일 데이터 폴백 실행');
+        await fallbackToPreviousDay('wishlist');
+      }
     }
-  }
-)
-  .then(games => {
-    if (games) console.log(`\n🎉 완료! Wishlist ${games.length}개 수집 및 저장됨`);
+  );
+  run.collected = result.saved;
+  run.failed    = result.failed;
+  run.expected  = result.games.length;
+  return result;
+})
+  .then(result => {
+    console.log(`\n🎉 완료! Wishlist ${result.games.length}개 수집, ${result.saved}개 저장됨`);
     process.exit(0);
   })
   .catch(err => {
