@@ -7,7 +7,7 @@ const { spawnSync } = require('child_process');
 const MIN = 60 * 1000;
 const envMs = (name, fallback) => parseInt(process.env[name]) || fallback;
 // 로그용 시간 표기 (1분 미만은 초 단위)
-const fmt = (ms) => (ms >= MIN ? `${fmt(ms)}` : `${Math.round(ms / 1000)}초`);
+const fmt = (ms) => (ms >= MIN ? `${Math.round(ms / MIN)}분` : `${Math.round(ms / 1000)}초`);
 
 /**
  * 수집 단계 정의
@@ -150,7 +150,7 @@ async function runPipeline() {
   return anyFailed ? 1 : 0;
 }
 
-module.exports = { runStep, withTimeout, STEPS };
+module.exports = { runStep, withTimeout, fmt, STEPS };
 
 if (require.main === module) {
   runPipeline()

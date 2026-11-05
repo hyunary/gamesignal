@@ -214,3 +214,34 @@ test('runStep: exit 1 → failed, exit 0 → ok (마감·알림 없음)', async 
   } finally { console.error = origErr; console.log = origLog; }
   assert.equal(d.stale.length, 1);
 });
+
+// ── PR #10 리뷰: fmt 재귀 회귀 방지 + 실제 기본 상한값으로 1단계 로그 출력 확인 ──
+const { spawnSync } = require('child_process');
+
+test('fmt: 15분·17분·30초를 재귀 없이 표기', () => {
+  const { fmt } = require('../../pipeline/run');
+  assert.equal(fmt(15 * 60 * 1000), '15분');
+  assert.equal(fmt(17 * 60 * 1000), '17분');
+  assert.equal(fmt(30 * 1000), '30초');
+});
+
+test('run.js: 실제 기본 상한값(STEP_TIMEOUT_* 미설정)으로 1단계 로그까지 출력', () => {
+  // 기본값을 쓰도록 STEP_TIMEOUT_* 를 제거한 새 프로세스에서 run.js를 로드하고,
+  // 1단계 스크립트만 즉시 exit 0 하는 임시 파일로 바꿔 runStep 실행 (DB 불필요)
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.startsWith('STEP_TIMEOUT_')) delete env[k];
+  const exitZero = tmpScript('process.exit(0)');
+  const runJs = path.resolve(__dirname, '../../pipeline/run.js');
+  const driver = `
+    const { STEPS, runStep } = require(${JSON.stringify(runJs)});
+    const step = { ...STEPS[0], script: ${JSON.stringify(exitZero)} };
+    runStep(step, { today: '2026-11-05', failStaleRuns: async () => 0, alert: async () => {} })
+      .then((r) => { console.log('OUTCOME=' + r.outcome + ' TIMEOUT_MS=' + step.timeoutMs); })
+      .catch((e) => { console.error('ERR=' + e.message); process.exit(3); });
+  `;
+  const r = spawnSync(process.execPath, ['-e', driver], { env, encoding: 'utf8', timeout: 30000 });
+  assert.equal(r.status, 0, `driver 비정상 종료: ${r.stderr}`);
+  assert.match(r.stdout, /\[1\/5 Most Played\] 실행 중\.\.\. \(상한 15분\)/);
+  assert.match(r.stdout, /\[1\/5 Most Played\] 완료 ✅/);
+  assert.match(r.stdout, /OUTCOME=ok TIMEOUT_MS=900000/);
+});

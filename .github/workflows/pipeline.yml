@@ -19,10 +19,11 @@ jobs:
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@v6
-      - name: Node.js 20 설정
+      - name: Node.js 22 설정
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          # Node 20은 2026-04 EOL → 22 (LTS)
+          node-version: '22'
           cache: 'npm'
       - name: Python 설정 (Playwright용)
         uses: actions/setup-python@v6
