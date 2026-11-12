@@ -1,9 +1,11 @@
 const pool = require('../db/pool');
 const { shouldSuppress } = require('./filters');
 const { emitSignal } = require('./emit');
-async function detectNewEntry(today) {
-  console.log('  [S1] 신규 진입 감지 중...');
+// skipWishlist: 당일 wishlist 단계가 failed면 new_entry_wl은 감지하지 않음 (Most Played만)
+async function detectNewEntry(today, { skipWishlist = false } = {}) {
+  console.log(`  [S1] 신규 진입 감지 중...${skipWishlist ? ' (wishlist failed → new_entry_wl 건너뜀)' : ''}`);
   // 오늘 신규 진입한 게임 조회
+  const wlCondition = skipWishlist ? '' : ' OR s.is_new_entry_wl = TRUE';
   const { rows } = await pool.query(`
     SELECT
       s.app_id, g.title,
@@ -14,7 +16,7 @@ async function detectNewEntry(today) {
     FROM game_snapshots s
     JOIN games g USING(app_id)
     WHERE s.snapshot_date = $1
-      AND (s.is_new_entry_mp = TRUE OR s.is_new_entry_wl = TRUE)
+      AND (s.is_new_entry_mp = TRUE${wlCondition})
   `, [today]);
   console.log(`  [S1] 후보: ${rows.length}개`);
   let emitted = 0;
@@ -40,7 +42,7 @@ async function detectNewEntry(today) {
       }
     }
     // Wishlist 신규 진입
-    if (row.is_new_entry_wl) {
+    if (row.is_new_entry_wl && !skipWishlist) {
       const suppress = await shouldSuppress(
         row.app_id, 'new_entry_wl', row.concurrent_users, today
       );

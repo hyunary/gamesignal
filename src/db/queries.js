@@ -89,4 +89,13 @@ async function failStaleRuns(runDate, sources, errorMessage) {
   `, [runDate, sources, errorMessage]);
   return rowCount;
 }
-module.exports = { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun, failStaleRuns };
+// 특정 날짜·소스의 pipeline_runs 상태 조회 (없으면 null)
+// 신호 엔진이 당일 수집 단계 실패 여부를 보고 관련 신호 감지를 건너뛸 때 사용
+async function getRunStatus(runDate, source) {
+  const { rows } = await pool.query(`
+    SELECT status FROM pipeline_runs
+    WHERE run_date = $1::date AND source = $2
+  `, [runDate, source]);
+  return rows[0]?.status ?? null;
+}
+module.exports = { upsertGame, upsertSnapshot, startPipelineRun, finishPipelineRun, failStaleRuns, getRunStatus };
