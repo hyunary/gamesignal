@@ -4,7 +4,7 @@ const { detectTrafficRevival } = require('./signal2');
 const { detectWishlistSurge } = require('./signal3');
 const { detectReviewSpike }   = require('./signal4');
 const { detectComposite }     = require('./signal5');
-const { startPipelineRun, finishPipelineRun } = require('../db/queries');
+const { startPipelineRun, finishPipelineRun, getRunStatus } = require('../db/queries');
 const { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert } = require('../notifications/discord');
 const { analyzeGameSentiment } = require('../collectors/youtubeSentiment');
 async function runSignalEngine(date) {
@@ -17,8 +17,16 @@ async function runSignalEngine(date) {
   const runId = await startPipelineRun('signal_engine');
   let totalSignals = 0;
   try {
+    // 당일 wishlist 단계가 failed면 위시리스트 기반 신호(S3, new_entry_wl)는 건너뜀
+    // (11/11: SteamSpy가 엉뚱한 목록을 돌려줘 가짜 신호 49건 발송)
+    const wishlistStatus = await getRunStatus(today, 'wishlist');
+    const skipWishlist = wishlistStatus === 'failed';
+    if (skipWishlist) {
+      console.warn('⚠️ 당일 wishlist 단계 failed → S3(위시리스트 급등)·new_entry_wl 감지 건너뜀');
+    }
+
     // S1 → S2 → S3 → S4 순서 실행 (S5는 반드시 마지막)
-    totalSignals += await detectNewEntry(today);
+    totalSignals += await detectNewEntry(today, { skipWishlist });
 
     // Wishlist 신규 진입 게임 YouTube 감성 분석
     const { rows: wlNewEntries } = await pool.query(`
@@ -43,7 +51,11 @@ async function runSignalEngine(date) {
     }
 
     totalSignals += await detectTrafficRevival(today);
-    totalSignals += await detectWishlistSurge(today);
+    if (skipWishlist) {
+      console.log('  [S3] 건너뜀 (당일 wishlist failed)');
+    } else {
+      totalSignals += await detectWishlistSurge(today);
+    }
     totalSignals += await detectReviewSpike(today);
     // S5: 복합 신호 (S1~S4 완료 후 실행)
     totalSignals += await detectComposite(today);
