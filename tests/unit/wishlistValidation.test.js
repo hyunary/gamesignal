@@ -77,7 +77,7 @@ function harness({ responses, baseline = { date: '2026-11-10', ids: ids(1000, 50
   const deps = {
     fetch: async () => { const body = responses[Math.min(calls.fetch, responses.length - 1)]; calls.fetch++; return validateSteamSpyResponse(200, body); },
     loadBaseline: async () => baseline,
-    save: async (games) => { calls.saved = games; return { saved: games.length, failed: 0 }; },
+    save: async (games, base) => { calls.saved = games; calls.saveBaseline = base; return { saved: games.length, failed: 0 }; },
     now: () => t,
     wait: async (ms) => { calls.waits.push(ms); t += ms; },
     budgetMs, retryDelayMs: 120000, minOverlap: 15, log: quietLog,
@@ -130,6 +130,12 @@ test('collect: 평소 수준 변동(겹침 47개) → 저장', async () => {
   const r = await runWishlistCollection(h.deps);
   assert.equal(r.status, 'ok');
   assert.equal(h.calls.saved.length, 50);
+});
+test('collect: 저장 시 순위 비교 기준일을 함께 넘김 (전날 0건이어도 전부 신규 진입 되지 않게)', async () => {
+  const base = { date: '2026-11-10', ids: ids(1000, 50) };
+  const h = harness({ responses: [steamSpyBody(1000, 100)], baseline: base });
+  await runWishlistCollection(h.deps);
+  assert.equal(h.calls.saveBaseline, base);
 });
 test('collect: 기준 목록 없음 → 급변 검사 생략하고 저장', async () => {
   const h = harness({ responses: [steamSpyBody(9000, 100)], baseline: null });

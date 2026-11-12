@@ -169,8 +169,8 @@ async function runWishlistCollection(deps) {
     };
   }
 
-  // 3) 검증 통과 → 저장
-  const { saved, failed } = await save(games);
+  // 3) 검증 통과 → 저장 (순위 비교 기준일도 함께 전달 — 전날이 비어 있어도 전부 신규 진입으로 찍히지 않게)
+  const { saved, failed } = await save(games, baseline);
   return { status: 'ok', attempts, games, saved, failed };
 }
 
@@ -193,21 +193,31 @@ async function loadBaselineFromDb(today) {
   return rows[0] || null;
 }
 
-// 스냅샷 저장 (저장 컬럼·rank_change_flag 계산은 기존과 동일)
-async function saveWishlistData(games, today) {
+/**
+ * 스냅샷 저장 (저장 컬럼·rank_change_flag 계산식은 기존과 동일)
+ * 비교 기준: 기준일(baseline.date, 최근 7일 중 위시리스트가 채워진 가장 최근 날).
+ * 기존처럼 '정확히 전날'과 비교하면 전날 수집이 실패(저장 0건)했을 때
+ * Top 50 전부가 is_new_entry_wl=TRUE로 찍혀 가짜 신규 진입 신호가 쏟아진다.
+ * 기준일이 없으면(첫 실행 등) 기존대로 전날과 비교.
+ */
+async function saveWishlistData(games, today, baseline = null) {
   console.log('\n💾 DB 저장 중...');
+  const prevDate = baseline?.date ?? null;
+  const prevDateSql = prevDate ? '$2::date' : '$2::date - 1';
+  const prevRef = prevDate ?? today;
+  console.log(`   순위 비교 기준일: ${prevDate ?? '전날'}`);
   let saved = 0;
   let failed = 0;
   for (const game of games) {
     try {
       // 게임 기본 정보 저장
       await upsertGame(game.appId, game.title);
-      // 전일 wishlist_rank 조회 (rank_change_flag 계산용)
+      // 기준일 wishlist_rank 조회 (is_new_entry_wl / rank_change_flag 계산용)
       const { rows } = await pool.query(`
         SELECT wishlist_rank FROM game_snapshots
         WHERE app_id = $1
-          AND snapshot_date = $2::date - 1
-      `, [game.appId, today]);
+          AND snapshot_date = ${prevDateSql}
+      `, [game.appId, prevRef]);
       const prevRank = rows[0]?.wishlist_rank ?? null;
       const isNewEntry = prevRank === null;
       // rank_change_flag 계산 (경계값: >= 5)
@@ -256,7 +266,7 @@ async function collectWishlist() {
   await withPipelineRun('wishlist', async (run) => {
     result = await runWishlistCollection({
       loadBaseline: () => loadBaselineFromDb(today),
-      save: (games) => saveWishlistData(games, today),
+      save: (games, baseline) => saveWishlistData(games, today, baseline),
     });
     if (result.status === 'failed') {
       run.status = 'failed';
