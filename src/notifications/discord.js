@@ -1,6 +1,7 @@
 const axios = require('axios');
 const pool = require('../db/pool');
 const { retryWithBackoff } = require('../utils/retry');
+const { surgeLabel } = require('../signals/format');
 require('dotenv').config();
 // 신호 타입별 이모지 + 색상
 const SIGNAL_CONFIG = {
@@ -85,7 +86,8 @@ function buildDescription(signalType, payload, stock) {
       desc = `**${payload.absent_days}일** 차트 이탈 후 오늘 복귀!\n7일 평균 대비 CCU **+${payload.ccu_pct}%** 급반등.`;
       break;
     case 'wishlist_surge':
-      desc = `위시리스트 순위 **${payload.prev_rank}위 → ${payload.curr_rank}위**\n**+${payload.change}계단** 급등!`;
+      // 예: "31위→8위, +23계단 (기준 11/10)" — prev_rank가 없어도 null을 표기하지 않음
+      desc = `위시리스트 순위 **${surgeLabel(payload)}** 급등!`;
       break;
     case 'review_spike':
       desc = `최근 30일 리뷰 **+${payload.review_pct}%** 급증\n긍정률 **${payload.pos_pct}%**`;
@@ -155,4 +157,4 @@ async function sendPipelineAlert(source, errorMessage) {
   };
   await sendDiscordMessage(process.env.DISCORD_WEBHOOK_ALERT, { embeds: [embed] });
 }
-module.exports = { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert };
+module.exports = { sendSignalAlert, sendPipelineSuccess, sendPipelineAlert, buildDescription };

@@ -91,10 +91,13 @@ async function failStaleRuns(runDate, sources, errorMessage) {
 }
 // 특정 날짜·소스의 pipeline_runs 상태 조회 (없으면 null)
 // 신호 엔진이 당일 수집 단계 실패 여부를 보고 관련 신호 감지를 건너뛸 때 사용
-async function getRunStatus(runDate, source) {
-  const { rows } = await pool.query(`
+// 같은 날 실행 기록이 여러 행이면 마지막(started_at 최신) 실행 기준
+async function getRunStatus(runDate, source, db = pool) {
+  const { rows } = await db.query(`
     SELECT status FROM pipeline_runs
     WHERE run_date = $1::date AND source = $2
+    ORDER BY started_at DESC
+    LIMIT 1
   `, [runDate, source]);
   return rows[0]?.status ?? null;
 }
