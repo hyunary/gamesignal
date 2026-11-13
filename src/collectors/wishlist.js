@@ -2,6 +2,7 @@ const axios = require('axios');
 const pool = require('../db/pool');
 const { upsertGame } = require('../db/queries');
 const { withPipelineRun } = require('../utils/pipelineRun');
+const { loadWishlistBaseline } = require('../db/wishlistBaseline');
 const { sleep } = require('../utils/sleep');
 require('dotenv').config();
 
@@ -17,9 +18,7 @@ const RETRY_DELAY_MS = parseInt(process.env.WISHLIST_RETRY_DELAY_MS) || 2 * 60 *
 // 목록 급변 판정: 기준일 Top 50과 겹치는 게임이 이 수 미만이면 failed (0이면 검사 끔)
 const MIN_OVERLAP = Number.isNaN(parseInt(process.env.WISHLIST_MIN_OVERLAP))
   ? 15 : parseInt(process.env.WISHLIST_MIN_OVERLAP);
-// 기준일로 인정할 최소 위시리스트 행 수 (저장 0건이었던 날은 기준에서 제외)
-const BASELINE_MIN_ROWS = parseInt(process.env.WISHLIST_BASELINE_MIN_ROWS) || 40;
-const BASELINE_LOOKBACK_DAYS = 7;
+// 기준일 정의(최근 7일 중 위시리스트 40행 이상인 가장 최근 날)는 src/db/wishlistBaseline.js — S3와 공용
 
 /**
  * SteamSpy top100in2weeks 응답 형식 검증 (순수 함수 — 테스트 대상)
@@ -159,7 +158,8 @@ async function runWishlistCollection(deps) {
   if (cont.skipped) {
     log.warn('⚠️ 비교할 기준 위시리스트가 없어 목록 급변 검사 생략');
   } else {
-    log.log(`🔁 기준일 ${baseline.date} Top ${cont.baselineSize}과 겹침 ${cont.overlap}개 (최소 ${minOverlap})`);
+    const gap = baseline.gapDays ? ` · 간격 ${baseline.gapDays}일` : '';
+    log.log(`🔁 기준일 ${baseline.date}${gap} Top ${cont.baselineSize}과 겹침 ${cont.overlap}개 (최소 ${minOverlap})`);
   }
   if (!cont.ok) {
     const sample = games.slice(0, 5).map((g) => `${g.appId}:${g.title}`).join(', ');
@@ -172,25 +172,6 @@ async function runWishlistCollection(deps) {
   // 3) 검증 통과 → 저장 (순위 비교 기준일도 함께 전달 — 전날이 비어 있어도 전부 신규 진입으로 찍히지 않게)
   const { saved, failed } = await save(games, baseline);
   return { status: 'ok', attempts, games, saved, failed };
-}
-
-/**
- * 기준 위시리스트: 오늘 이전 7일 안에서 위시리스트 행이 BASELINE_MIN_ROWS 이상인 가장 최근 날
- * (저장 0건이었던 날은 건너뜀 — 예: 11/12)
- */
-async function loadBaselineFromDb(today) {
-  const { rows } = await pool.query(`
-    SELECT snapshot_date::text AS date, array_agg(app_id) AS ids
-    FROM game_snapshots
-    WHERE snapshot_date <  $1::date
-      AND snapshot_date >= $1::date - $2::int
-      AND wishlist_rank IS NOT NULL
-    GROUP BY snapshot_date
-    HAVING COUNT(*) >= $3
-    ORDER BY snapshot_date DESC
-    LIMIT 1
-  `, [today, BASELINE_LOOKBACK_DAYS, BASELINE_MIN_ROWS]);
-  return rows[0] || null;
 }
 
 /**
@@ -265,7 +246,7 @@ async function collectWishlist() {
   let result = null;
   await withPipelineRun('wishlist', async (run) => {
     result = await runWishlistCollection({
-      loadBaseline: () => loadBaselineFromDb(today),
+      loadBaseline: () => loadWishlistBaseline(today),
       save: (games, baseline) => saveWishlistData(games, today, baseline),
     });
     if (result.status === 'failed') {
